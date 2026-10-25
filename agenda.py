@@ -7,6 +7,7 @@
 #
 # Uso (no computador do Vitor; depois: git pull antes, git push depois):
 #   python agenda.py <cliente> adicionar <arte.png> "2026-10-27 18:00" <legenda.txt> [--redes instagram,facebook]
+#   python agenda.py <cliente> adicionar <pasta-do-carrossel> "2026-10-27 18:00" <legenda.txt>   (até 10 .png, em ordem de nome)
 #   python agenda.py <cliente> listar
 #   python agenda.py <cliente> remover <id>
 #   python agenda.py <cliente> publicar     (o robô roda isso a cada 15 min: publica o que já passou da hora)
@@ -48,14 +49,19 @@ def gravar(cliente, posts):
 
 
 def adicionar(cliente, arte, quando, legenda, redes):
+    """arte = um .png (post simples) ou uma pasta com os .png do carrossel, em ordem de nome."""
     data = datetime.strptime(quando, "%Y-%m-%d %H:%M").replace(tzinfo=FUSO)
+    artes = sorted(Path(arte).glob("*.png")) if Path(arte).is_dir() else [Path(arte)]
+    if not 1 <= len(artes) <= 10:
+        sys.exit("O Instagram aceita de 1 a 10 imagens por post")
     posts = ler(cliente)
     pid = data.strftime("%Y%m%d-%H%M") + f"-{len(posts) + 1:02d}"
     _, pasta = caminhos(cliente)
     pasta.mkdir(parents=True, exist_ok=True)
-    (pasta / f"{pid}.enc").write_text(json.dumps(cofre.cifrar(cliente, Path(arte).read_bytes())), encoding="utf-8")
+    for i, a in enumerate(artes, 1):
+        (pasta / f"{pid}-{i:02d}.enc").write_text(json.dumps(cofre.cifrar(cliente, a.read_bytes())), encoding="utf-8")
     posts.append({
-        "id": pid, "quando": data.isoformat(), "redes": redes, "arte": Path(arte).name,
+        "id": pid, "quando": data.isoformat(), "redes": redes, "artes": [a.name for a in artes],
         "legenda": Path(legenda).read_text(encoding="utf-8").strip(), "status": "agendado",
     })
     posts.sort(key=lambda p: p["quando"])
@@ -73,7 +79,8 @@ def listar(cliente):
 def remover(cliente, pid):
     posts = ler(cliente)
     _, pasta = caminhos(cliente)
-    (pasta / f"{pid}.enc").unlink(missing_ok=True)
+    for f in pasta.glob(f"{pid}-*.enc"):
+        f.unlink()
     gravar(cliente, [p for p in posts if p["id"] != pid])
     print(f"Removido {pid}")
 
@@ -90,33 +97,56 @@ def post(caminho, token, **dados):
     return resposta
 
 
+def esperar_pronto(criacao):
+    """O Instagram processa cada imagem antes de deixar publicar."""
+    for _ in range(30):
+        if api(criacao, fields="status_code").get("status_code") == "FINISHED":
+            return
+        time.sleep(4)
+    raise RuntimeError(f"O Instagram não terminou de processar a mídia {criacao}")
+
+
 def publicar_post(cliente, p):
     ig = ENV.get(f"IG_{cliente.upper()}")
     pagina = ENV.get(f"FB_{cliente.upper()}")
     _, pasta = caminhos(cliente)
-    imagem = cofre.decifrar(cliente, json.loads((pasta / f"{p['id']}.enc").read_text(encoding="utf-8")))
+    artes = p.get("artes") or [p["arte"]]
+    token_pagina = token_da_pagina(pagina)
+    no_facebook = "facebook" in p["redes"]
     links = {}
 
+    # As fotos sobem primeiro na página do Facebook sem publicar: o post do Facebook
+    # junta todas, e o Instagram busca cada imagem por um endereço da própria Meta
+    fotos = []
     with tempfile.TemporaryDirectory() as tmp:
-        arte = Path(tmp) / p["arte"]
-        arte.write_bytes(imagem)
-        # A foto sobe primeiro na página do Facebook: publicada (se o post é para o Facebook)
-        # ou só guardada, para o Instagram buscar a imagem por um endereço da própria Meta
-        token_pagina = token_da_pagina(pagina)
-        no_facebook = "facebook" in p["redes"]
-        with arte.open("rb") as f:
-            foto = post(f"{pagina}/photos", token_pagina, arquivos={"source": (arte.name, f, "image/png")},
-                        message=p["legenda"] if no_facebook else "", published="true" if no_facebook else "false")
-        if no_facebook:
-            links["facebook"] = f"https://www.facebook.com/{foto.get('post_id', foto['id'])}"
+        for i, nome in enumerate(artes, 1):
+            arquivo = pasta / f"{p['id']}-{i:02d}.enc"
+            if not arquivo.exists():  # posts agendados antes do carrossel: um arquivo só
+                arquivo = pasta / f"{p['id']}.enc"
+            arte = Path(tmp) / nome
+            arte.write_bytes(cofre.decifrar(cliente, json.loads(arquivo.read_text(encoding="utf-8"))))
+            with arte.open("rb") as f:
+                fotos.append(post(f"{pagina}/photos", token_pagina, arquivos={"source": (nome, f, "image/png")},
+                                  published="false")["id"])
+
+    if no_facebook:
+        anexos = {f"attached_media[{i}]": json.dumps({"media_fbid": f}) for i, f in enumerate(fotos)}
+        feito = post(f"{pagina}/feed", token_pagina, message=p["legenda"], **anexos)
+        links["facebook"] = f"https://www.facebook.com/{feito['id']}"
 
     if "instagram" in p["redes"]:
-        url = api(foto["id"], token=token_pagina, fields="images")["images"][0]["source"]
-        criacao = post(f"{ig}/media", ENV["META_TOKEN"], image_url=url, caption=p["legenda"])["id"]
-        for _ in range(30):  # o Instagram processa a imagem antes de deixar publicar
-            if api(criacao, fields="status_code").get("status_code") == "FINISHED":
-                break
-            time.sleep(4)
+        urls = [api(f, token=token_pagina, fields="images")["images"][0]["source"] for f in fotos]
+        if len(urls) == 1:
+            criacao = post(f"{ig}/media", ENV["META_TOKEN"], image_url=urls[0], caption=p["legenda"])["id"]
+        else:
+            filhos = []
+            for u in urls:
+                filho = post(f"{ig}/media", ENV["META_TOKEN"], image_url=u, is_carousel_item="true")["id"]
+                esperar_pronto(filho)
+                filhos.append(filho)
+            criacao = post(f"{ig}/media", ENV["META_TOKEN"], media_type="CAROUSEL",
+                           children=",".join(filhos), caption=p["legenda"])["id"]
+        esperar_pronto(criacao)
         midia = post(f"{ig}/media_publish", ENV["META_TOKEN"], creation_id=criacao)["id"]
         links["instagram"] = api(midia, fields="permalink").get("permalink")
     return links
