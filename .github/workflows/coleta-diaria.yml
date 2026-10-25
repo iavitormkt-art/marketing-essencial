@@ -1,0 +1,41 @@
+# Robô diário do app de acompanhamento: coleta Instagram e Facebook de cada
+# cliente às 23h de Brasília (02h UTC) e grava o cofre criptografado.
+# Também pode ser rodado na mão em Actions > Coleta diária > Run workflow.
+name: Coleta diária
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: coleta
+  cancel-in-progress: false
+
+jobs:
+  coletar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install cryptography
+      - name: Coletar e fechar os cofres
+        env:
+          META_TOKEN: ${{ secrets.META_TOKEN }}
+          IG_STUDIO: ${{ secrets.IG_STUDIO }}
+          FB_STUDIO: ${{ secrets.FB_STUDIO }}
+          SENHA_STUDIO: ${{ secrets.SENHA_STUDIO }}
+        # Um cliente novo = mais uma linha de segredos acima e o id na lista abaixo
+        run: python robo.py studio
+      - name: Gravar no repositório
+        run: |
+          git config user.name "robo-marketing-essencial"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dados/*.enc.json
+          git diff --cached --quiet || git commit -m "Coleta $(TZ=America/Sao_Paulo date +%F)"
+          git push

@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Marketing Essencial</title>
+<meta name="description" content="Acompanhamento diário do Instagram e do Facebook · Studio Vitor Campos">
+<meta name="theme-color" content="#003346">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon-32.png" type="image/png">
+<link rel="apple-touch-icon" href="icone-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Marketing Essencial">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* App de acompanhamento do Marketing Essencial (PWA), na identidade do
+   Studio Vitor Campos: azul-petróleo #003346 e ciano #00FFF9.
+   Sem ?cliente= mostra DADOS DE EXEMPLO; com ?cliente=<id> lê dados/<id>.json,
+   gravado pelo coletor.py a partir da API oficial da Meta. */
+:root {
+  --fundo: #eef4f6;
+  --cartao: #ffffff;
+  --texto: #0b2430;
+  --texto-2: #4a6470;
+  --texto-3: #6f8790;
+  --linha: #dde8ec;
+  --marca: #0a7f92;
+  --marca-suave: #dcf1f4;
+  --sobre-marca: #ffffff;
+  --faixa: #003346;
+  --ciano: #00fff9;
+  --serie-ig: #0a8fa3;
+  --serie-fb: #3b5bdb;
+  --ok: #2b8a3e;
+  --ok-suave: #e6f4ea;
+  --aviso: #b35c00;
+  --aviso-suave: #fff1df;
+  --sombra: 0 1px 2px rgba(0, 51, 70, 0.05), 0 4px 16px rgba(0, 51, 70, 0.07);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fundo: #021c26; --cartao: #062b38; --texto: #e6f6f8; --texto-2: #a9c4cc; --texto-3: #7d99a2;
+    --linha: #12404f; --marca: #00fff9; --marca-suave: #0b3d4c; --sobre-marca: #003346;
+    --faixa: #003346; --serie-ig: #00a6a2; --serie-fb: #6382f2;
+    --ok: #69db7c; --ok-suave: #1d3022; --aviso: #ffa94d; --aviso-suave: #3a2a17; --sombra: none;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --fundo: #021c26; --cartao: #062b38; --texto: #e6f6f8; --texto-2: #a9c4cc; --texto-3: #7d99a2;
+  --linha: #12404f; --marca: #00fff9; --marca-suave: #0b3d4c; --sobre-marca: #003346;
+  --faixa: #003346; --serie-ig: #00a6a2; --serie-fb: #6382f2;
+  --ok: #69db7c; --ok-suave: #1d3022; --aviso: #ffa94d; --aviso-suave: #3a2a17; --sombra: none;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--fundo); color: var(--texto);
+  font: 15px/1.45 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+}
+.tela { max-width: 560px; margin: 0 auto; padding: 0 16px; }
+
+/* ---------- faixa da marca + topo */
+.faixa {
+  background: var(--faixa); color: #e6f6f8;
+  padding: calc(8px + env(safe-area-inset-top)) 0 8px;
+}
+.faixa .tela { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; letter-spacing: .02em; }
+.faixa img { width: 22px; height: 22px; border-radius: 50%; }
+.faixa b { color: var(--ciano); font-weight: 700; }
+header { position: sticky; top: 0; z-index: 5; background: var(--fundo); padding: 12px 0 10px; }
+.topo { display: flex; align-items: center; gap: 12px; }
+.avatar {
+  width: 44px; height: 44px; border-radius: 50%; flex: none; overflow: hidden;
+  background: var(--marca-suave); color: var(--marca);
+  display: grid; place-items: center; font-weight: 800; font-size: 18px;
+}
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+.topo h1 { font-size: 17px; margin: 0; line-height: 1.2; }
+.topo .sub { font-size: 12.5px; color: var(--texto-3); }
+.exemplo {
+  margin: 12px 0 0; padding: 8px 12px; border-radius: 10px;
+  background: var(--aviso-suave); color: var(--aviso); font-size: 12.5px; font-weight: 600;
+}
+.redes { display: flex; gap: 6px; margin-top: 12px; }
+.redes[hidden] { display: none; }
+.redes button {
+  display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--linha); background: var(--cartao);
+  color: var(--texto-2); font: inherit; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 99px; cursor: pointer;
+}
+.redes button svg { width: 15px; height: 15px; }
+.redes button[aria-pressed="true"] { border-color: var(--marca); color: var(--marca); background: var(--marca-suave); }
+.periodos { display: flex; gap: 6px; margin-top: 10px; background: var(--cartao); padding: 4px; border-radius: 12px; box-shadow: var(--sombra); }
+.periodos button {
+  flex: 1; border: 0; background: none; color: var(--texto-2); font: inherit; font-weight: 600;
+  padding: 8px 0; border-radius: 9px; cursor: pointer;
+}
+.periodos button[aria-pressed="true"] { background: var(--marca); color: var(--sobre-marca); }
+
+/* ---------- cartões */
+section { margin-top: 18px; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--texto-3); margin: 0 0 8px 4px; font-weight: 700; }
+.cartao { background: var(--cartao); border-radius: 16px; box-shadow: var(--sombra); padding: 14px 16px; }
+.cartao + .cartao { margin-top: 10px; }
+
+.numeros { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.numero { background: var(--cartao); border-radius: 16px; box-shadow: var(--sombra); padding: 12px 14px; }
+.numero .rotulo { font-size: 12.5px; color: var(--texto-2); }
+.numero .valor { font-size: 24px; font-weight: 800; letter-spacing: -.02em; margin-top: 2px; }
+.numero .delta { font-size: 12px; font-weight: 600; color: var(--texto-3); }
+.numero .delta.sobe { color: var(--ok); }
+.numero .partes { font-size: 12px; color: var(--texto-3); margin-top: 2px; }
+
+.resumo-dia { font-size: 15px; }
+.resumo-dia b { color: var(--marca); }
+
+/* posts */
+.post { display: flex; gap: 12px; }
+.post .foto {
+  width: 72px; height: 72px; border-radius: 12px; flex: none; display: grid; place-items: center;
+  font-size: 30px; background: var(--marca-suave); object-fit: cover;
+}
+.post .info { min-width: 0; flex: 1; }
+.post .tipo { font-size: 11.5px; font-weight: 700; color: var(--marca); text-transform: uppercase; letter-spacing: .04em; }
+.post .legenda { font-size: 14px; margin: 2px 0 6px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.metricas { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 12.5px; color: var(--texto-2); }
+.metricas span { white-space: nowrap; }
+.metricas a { color: var(--marca); }
+
+/* comentários */
+.coment { display: flex; gap: 10px; padding: 10px 0; border-top: 1px solid var(--linha); }
+.coment:first-child { border-top: 0; padding-top: 0; }
+.coment:last-child { padding-bottom: 0; }
+.coment .quem { font-size: 12.5px; color: var(--texto-3); }
+.coment .texto { font-size: 14px; }
+.estado { margin-left: auto; flex: none; align-self: flex-start; font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: 99px; white-space: nowrap; }
+.estado.ok { background: var(--ok-suave); color: var(--ok); }
+.estado.espera { background: var(--aviso-suave); color: var(--aviso); }
+
+/* gráfico */
+.grafico { position: relative; }
+.grafico svg { display: block; width: 100%; height: 170px; overflow: visible; }
+.grafico .eixo { fill: var(--texto-3); font-size: 11px; }
+.grafico .grade { stroke: var(--linha); stroke-width: 1; }
+.grafico .ig { fill: var(--serie-ig); }
+.grafico .fb { fill: var(--serie-fb); }
+.grafico .vao { fill: var(--cartao); }
+.grafico .alvo { fill: transparent; cursor: pointer; }
+.grafico g.ativa .ig, .grafico g.ativa .fb { opacity: .8; }
+.dica {
+  position: absolute; pointer-events: none; background: var(--texto); color: var(--fundo);
+  font-size: 12.5px; padding: 6px 9px; border-radius: 8px; white-space: nowrap; transform: translate(-50%, -110%);
+  opacity: 0; transition: opacity .12s;
+}
+.dica.on { opacity: 1; }
+.titulo-graf { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; gap: 8px; flex-wrap: wrap; }
+.titulo-graf b { font-size: 14px; }
+.titulo-graf span { font-size: 12.5px; color: var(--texto-3); }
+.legenda-graf { display: flex; gap: 14px; font-size: 12.5px; color: var(--texto-2); margin: -2px 0 8px; }
+.legenda-graf i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+details.tabela { margin-top: 8px; font-size: 12.5px; color: var(--texto-2); }
+details.tabela summary { cursor: pointer; color: var(--texto-3); }
+details.tabela table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+details.tabela th { text-align: right; font-weight: 600; color: var(--texto-3); padding: 3px 0; }
+details.tabela th:first-child { text-align: left; }
+details.tabela td { padding: 3px 0; border-top: 1px solid var(--linha); text-align: right; font-variant-numeric: tabular-nums; }
+details.tabela td:first-child { text-align: left; }
+
+/* notas do gestor */
+.nota { display: flex; gap: 10px; }
+.nota .ic { width: 28px; height: 28px; border-radius: 50%; background: var(--marca-suave); color: var(--marca); display: grid; place-items: center; flex: none; font-size: 14px; }
+.nota p { margin: 0; font-size: 14px; }
+.nota .quando { font-size: 12px; color: var(--texto-3); }
+ul.passos { margin: 0; padding-left: 18px; font-size: 14px; }
+ul.passos li + li { margin-top: 4px; }
+
+/* navegação de baixo */
+nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--cartao);
+  border-top: 1px solid var(--linha); padding: 6px 0 calc(6px + env(safe-area-inset-bottom));
+}
+nav .tela { display: flex; justify-content: space-around; }
+nav button {
+  border: 0; background: none; font: inherit; font-size: 11.5px; font-weight: 600; color: var(--texto-3);
+  display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 10px; cursor: pointer;
+}
+nav button svg { width: 22px; height: 22px; }
+nav button[aria-current="page"] { color: var(--marca); }
+.vazio { color: var(--texto-3); font-size: 14px; }
+.rodape { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: var(--texto-3); margin: 22px 0 8px; }
+.rodape img { width: 20px; height: 20px; border-radius: 50%; }
+.sair { display: block; margin: 0 auto 8px; border: 0; background: none; color: var(--texto-3); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
+
+/* entrada com senha */
+#entrada {
+  position: fixed; inset: 0; z-index: 20; background: var(--faixa); color: #e6f6f8;
+  display: grid; place-items: center; padding: 24px 16px;
+}
+#entrada[hidden] { display: none; }
+#entrada form { width: 100%; max-width: 340px; text-align: center; }
+#entrada img { width: 88px; height: 88px; border-radius: 50%; }
+#entrada h1 { font-size: 20px; margin: 16px 0 4px; }
+#entrada p { margin: 0 0 18px; font-size: 14px; color: #a9c4cc; }
+#entrada input[type="password"] {
+  width: 100%; font: inherit; font-size: 16px; padding: 12px 14px; border-radius: 12px;
+  border: 1px solid #12404f; background: #021c26; color: #e6f6f8;
+}
+#entrada input[type="password"]:focus { outline: 2px solid var(--ciano); outline-offset: 1px; }
+#entrada label { display: flex; gap: 8px; align-items: center; justify-content: center; font-size: 13px; color: #a9c4cc; margin: 12px 0; }
+#entrada button {
+  width: 100%; border: 0; border-radius: 12px; padding: 12px; font: inherit; font-weight: 700;
+  background: var(--ciano); color: #003346; cursor: pointer;
+}
+#entrada button:disabled { opacity: .7; }
+#entrada .erro { color: #ffa94d; font-size: 13px; min-height: 18px; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div id="entrada" hidden>
+  <form autocomplete="on">
+    <img src="marca/logo-vc-96.png" alt="Studio Vitor Campos">
+    <h1>Marketing Essencial</h1>
+    <p>Digite a senha que você recebeu do Studio Vitor Campos.</p>
+    <input type="password" name="senha" autocomplete="current-password" aria-label="Senha" required>
+    <label><input type="checkbox" name="lembrar" checked> Lembrar neste aparelho</label>
+    <button type="submit">Entrar</button>
+    <div class="erro" role="alert"></div>
+  </form>
+</div>
+<div class="faixa">
+  <div class="tela"><img src="marca/logo-vc-96.png" alt=""><span><b>Marketing Essencial</b> · Studio Vitor Campos</span></div>
+</div>
+<header>
+  <div class="tela">
+    <div class="topo">
+      <div class="avatar" aria-hidden="true">M</div>
+      <div>
+        <h1>Moranguinho Confeitaria</h1>
+        <div class="sub" id="atualizado"></div>
+      </div>
+    </div>
+    <p class="exemplo">Protótipo com dados de exemplo. Na versão real, os números vêm direto do Instagram e do Facebook.</p>
+    <div class="redes" role="group" aria-label="Rede" hidden>
+      <button data-rede="ambos" aria-pressed="true">Ambos</button>
+      <button data-rede="instagram" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>Instagram
+      </button>
+      <button data-rede="facebook" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M13.5 21v-8h2.5M13.5 13H11M13.5 13v-2.5a2 2 0 0 1 2-2H17"/></svg>Facebook
+      </button>
+    </div>
+    <div class="periodos" role="group" aria-label="Período">
+      <button data-periodo="dia" aria-pressed="true">Hoje</button>
+      <button data-periodo="semana" aria-pressed="false">Semana</button>
+      <button data-periodo="mes" aria-pressed="false">Mês</button>
+    </div>
+  </div>
+</header>
+
+<main class="tela" id="conteudo"></main>
+
+<nav aria-label="Seções">
+  <div class="tela">
+    <button data-aba="resumo" aria-current="page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Resumo
+    </button>
+    <button data-aba="posts">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>Posts
+    </button>
+    <button data-aba="conversas">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Comentários
+    </button>
+    <button data-aba="relatorio">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Relatório
+    </button>
+  </div>
+</nav>
+
+<script>
+// ---------------------------------------------------------------- dados de exemplo
+// Formato igual ao que o coletor grava: um registro por dia, com "instagram"
+// e/ou "facebook". Valores inventados só para o protótipo (só Instagram).
+const HOJE = new Date(2026, 9, 24);
+const fmtData = (d) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+const diaSemana = (d) => d.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", "");
+// Métrica que a API não devolveu aparece como "—" (nunca inventamos número)
+const num = (n) => (n === null || n === undefined ? "—" : n.toLocaleString("pt-BR"));
+const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+const POSTS_MODELO = [
+  { tipo: "Feed", emoji: "🍓", legenda: "Bolo de morango com chantilly: encomende para o fim de semana" },
+  { tipo: "Reels", emoji: "🎂", legenda: "Bastidores: montagem do bolo de aniversário em 30 segundos" },
+  { tipo: "Feed", emoji: "🥐", legenda: "Salgados fresquinhos todo dia nas duas lojas" },
+  { tipo: "Story", emoji: "📍", legenda: "Horário de funcionamento de Ceilândia e Samambaia" },
+  { tipo: "Feed", emoji: "🍫", legenda: "Torta de chocolate belga: fatia ou inteira" },
+  { tipo: "Reels", emoji: "🎉", legenda: "Kit festa para 20 pessoas: o que vem na caixa" },
+];
+const COMENTARIOS_MODELO = [
+  ["Qual o valor do kg do bolo de morango?", true],
+  ["Vocês entregam em Taguatinga?", true],
+  ["A loja de Ceilândia abre domingo?", false],
+  ["Que lindo! Encomendei o meu ontem 😍", true],
+  ["Tem opção sem lactose?", false],
+];
+
+// Gera 31 dias de histórico, com uma variação estável (sempre o mesmo resultado)
+function gerarHistorico() {
+  let semente = 7;
+  const aleat = () => ((semente = (semente * 9301 + 49297) % 233280) / 233280);
+  const dias = [];
+  let seguidores = 35210;
+  for (let i = 30; i >= 0; i--) {
+    const data = new Date(HOJE); data.setDate(HOJE.getDate() - i);
+    const temPost = i % 2 === 0 || i % 5 === 0;
+    const posts = temPost ? [POSTS_MODELO[(30 - i) % POSTS_MODELO.length]].map((p) => ({
+      ...p,
+      curtidas: Math.round(180 + aleat() * 420),
+      comentarios: Math.round(4 + aleat() * 22),
+      salvamentos: Math.round(10 + aleat() * 60),
+      alcance: Math.round(2400 + aleat() * 5200),
+    })) : [];
+    const novos = Math.round(6 + aleat() * 28);
+    seguidores += novos;
+    const comentarios = COMENTARIOS_MODELO.slice(0, temPost ? 2 + Math.floor(aleat() * 3) : 0).map(([texto, ok], k) => ({
+      texto, respondido: i > 0 ? true : ok, quem: `cliente ${k + 1}`,
+    }));
+    dias.push({
+      data,
+      instagram: {
+        posts, comentarios, seguidores, novos,
+        alcance: Math.round(posts.reduce((s, p) => s + p.alcance, 0) * 0.8 + 1800 + aleat() * 1600),
+        visitas: Math.round(120 + aleat() * 260),
+        cliquesLink: Math.round(8 + aleat() * 30),
+      },
+    });
+  }
+  return dias;
+}
+let HISTORICO = gerarHistorico();
+let EXEMPLO = true;
+let REDES = ["instagram"];
+
+let NOTAS_REAIS = null;
+const CLIENTE = new URLSearchParams(location.search).get("cliente");
+
+// ---------------------------------------------------------------- cofre (dados criptografados)
+// Na internet só existe dados/<cliente>.enc.json, que abre com a senha do
+// cliente (PBKDF2-SHA256 + AES-256-GCM, igual ao cofre.py). A chave derivada
+// fica lembrada no aparelho; a senha em si nunca é guardada.
+const bytes = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+const LS = `me-chave-${CLIENTE}`;
+const lsLer = () => { try { return JSON.parse(localStorage.getItem(LS)); } catch { return null; } };
+const lsGravar = (v) => { try { v ? localStorage.setItem(LS, JSON.stringify(v)) : localStorage.removeItem(LS); } catch { /* sem armazenamento */ } };
+
+async function derivar(senha, cofre) {
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(senha), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits(
+    { name: "PBKDF2", hash: "SHA-256", salt: bytes(cofre.sal), iterations: cofre.iteracoes }, base, 256);
+  return new Uint8Array(bits);
+}
+async function decifrar(cofre, chave) {
+  const k = await crypto.subtle.importKey("raw", chave, "AES-GCM", false, ["decrypt"]);
+  const texto = await crypto.subtle.decrypt({ name: "AES-GCM", iv: bytes(cofre.iv) }, k, bytes(cofre.dados));
+  return JSON.parse(new TextDecoder().decode(texto));
+}
+
+function pedirSenha(cofre) {
+  const tela = document.getElementById("entrada");
+  tela.hidden = false;
+  const form = tela.querySelector("form"), erro = tela.querySelector(".erro"), botao = form.querySelector("button");
+  form.senha.focus();
+  return new Promise((resolver) => form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    erro.textContent = ""; botao.disabled = true; botao.textContent = "Abrindo…";
+    try {
+      const chave = await derivar(form.senha.value.trim().toLowerCase(), cofre);
+      const conteudo = await decifrar(cofre, chave);
+      if (form.lembrar.checked) lsGravar({ sal: cofre.sal, chave: btoa(String.fromCharCode(...chave)) });
+      tela.hidden = true;
+      resolver(conteudo);
+    } catch {
+      erro.textContent = "Senha incorreta. Confira e tente de novo.";
+    }
+    botao.disabled = false; botao.textContent = "Entrar";
+  }));
+}
+
+function sair() { lsGravar(null); location.reload(); }
+
+// Dados reais: app?cliente=studio lê o cofre dados/studio.enc.json (gravado pelo
+// robô diário). No computador do Vitor, sem cofre, lê dados/studio.json direto.
+async function carregarReais() {
+  if (!CLIENTE) return;
+  try {
+    let dados;
+    const r = await fetch(`dados/${encodeURIComponent(CLIENTE)}.enc.json`, { cache: "no-cache" });
+    if (r.ok) {
+      const cofre = await r.json();
+      const salva = lsLer();
+      let conteudo = null;
+      if (salva?.sal === cofre.sal) conteudo = await decifrar(cofre, bytes(salva.chave)).catch(() => null);
+      conteudo ??= await pedirSenha(cofre);
+      dados = conteudo.historico;
+      NOTAS_REAIS = conteudo.notas;
+    } else {
+      const r2 = await fetch(`dados/${encodeURIComponent(CLIENTE)}.json`, { cache: "no-cache" });
+      if (!r2.ok) return;
+      dados = await r2.json();
+    }
+    dados = dados.filter((d) => d.instagram || d.facebook);
+    if (!dados.length) return;
+    HISTORICO = dados.map((d) => ({ ...d, data: new Date(`${d.data}T12:00:00`) }));
+    EXEMPLO = false;
+    const ultimo = dados.at(-1);
+    REDES = ["instagram", "facebook"].filter((k) => ultimo[k]);
+    document.querySelector(".exemplo").hidden = true;
+    document.getElementById("atualizado").textContent =
+      `Atualizado em ${fmtData(new Date(ultimo.data + "T12:00:00"))} às ${ultimo.coletadoEm.slice(11, 16)}`;
+  } catch { /* sem dados reais: fica o exemplo */ }
+}
+
+// Anotações do gestor (na versão real, vêm de uma área de admin)
+const NOTAS = [
+  { quando: "24/10", texto: "Ativamos a resposta automática do Instagram com as perguntas frequentes (preço do kg, horários, encomendas)." },
+  { quando: "22/10", texto: "Bio e link ajustados: o link agora abre o WhatsApp da loja certa, com mensagem pronta." },
+  { quando: "20/10", texto: "Destaques novos: Cardápio, Encomendas, Lojas e Avaliações." },
+];
+const PASSOS = [
+  "Calendário de novembro com 18 posts e 2 Reels (Natal começa dia 15).",
+  "Responder todos os comentários em até 2 horas no horário da loja.",
+  "Ativar as recomendações da página do Facebook.",
+];
+
+// ---------------------------------------------------------------- estado
+let periodo = "dia";
+let aba = "resumo";
+let rede = "ambos";
+
+const NOME_REDE = { instagram: "Instagram", facebook: "Facebook" };
+const SIGLA = { instagram: "IG", facebook: "FB" };
+const redesAtivas = () => (rede === "ambos" ? REDES : [rede]);
+const dias = () => (periodo === "dia" ? HISTORICO.slice(-1) : periodo === "semana" ? HISTORICO.slice(-7) : HISTORICO);
+const anteriores = () => {
+  const n = dias().length;
+  return HISTORICO.slice(Math.max(0, HISTORICO.length - 2 * n), HISTORICO.length - n);
+};
+const nomePeriodo = { dia: "hoje", semana: "nos últimos 7 dias", mes: "nos últimos 30 dias" };
+
+// Soma um campo nos dias e nas redes escolhidas; null se nenhum valor veio da API
+function somaCampo(lista, campo, redes = redesAtivas()) {
+  let total = null;
+  for (const d of lista) for (const k of redes) {
+    const v = d[k]?.[campo];
+    if (v !== null && v !== undefined) total = (total ?? 0) + v;
+  }
+  return total;
+}
+const ultimoValor = (campo, redes = redesAtivas()) => somaCampo(HISTORICO.slice(-1), campo, redes);
+const postsDe = (d) => redesAtivas().flatMap((k) => (d[k]?.posts || []).map((p) => ({ ...p, rede: k, data: d.data })));
+const comentsDe = (d) => redesAtivas().flatMap((k) => (d[k]?.comentarios || []).map((c) => ({ ...c, rede: k, data: d.data })));
+
+function delta(atual, antes) {
+  if (!antes || atual === null) return "";
+  const p = Math.round(((atual - antes) / antes) * 100);
+  return p === 0 ? "igual ao período anterior" : `${p > 0 ? "▲" : "▼"} ${Math.abs(p)}% vs. anterior`;
+}
+// Em "Ambos", mostra quanto veio de cada rede
+const partes = (f) => (rede === "ambos" && REDES.length > 1
+  ? REDES.map((k) => `${SIGLA[k]} ${num(f(k))}`).join(" · ") : "");
+
+// ---------------------------------------------------------------- topo
+function desenharTopo() {
+  if (EXEMPLO) return;
+  const ig = HISTORICO.at(-1).instagram, fb = HISTORICO.at(-1).facebook;
+  const fonte = rede === "facebook" ? fb : ig || fb;
+  const titulo = rede === "instagram" ? `@${ig.perfil}` : fonte.nome || (ig && `@${ig.perfil}`);
+  document.querySelector(".topo h1").textContent = titulo;
+  const av = document.querySelector(".avatar");
+  av.innerHTML = fonte.foto ? `<img src="${esc(fonte.foto)}" alt="">` : esc(titulo.replace("@", "")[0].toUpperCase());
+  document.querySelector(".redes").hidden = REDES.length < 2;
+}
+
+// ---------------------------------------------------------------- blocos
+function cartoesNumeros() {
+  const d = dias(), a = anteriores();
+  const card = (rotulo, campo, f = (k) => somaCampo(d, campo, [k])) => {
+    const v = somaCampo(d, campo);
+    return [rotulo, num(v), delta(v, somaCampo(a, campo)), false, partes(f)];
+  };
+  const seguidores = ["Seguidores", num(ultimoValor("seguidores")),
+    `+${num(somaCampo(d, "novos"))} ${nomePeriodo[periodo]}`, true, partes((k) => ultimoValor("seguidores", [k]))];
+  const itens = rede === "instagram" ? [
+    seguidores, card("Alcance", "alcance"), card("Visitas ao perfil", "visitas"),
+    card(EXEMPLO ? "Cliques no WhatsApp" : "Cliques no link", "cliquesLink"),
+  ] : rede === "facebook" ? [
+    seguidores, card("Alcance", "alcance"), card("Visitas à página", "visitas"), card("Engajamento", "engajamento"),
+  ] : [
+    seguidores, card("Alcance", "alcance"), card("Visitas", "visitas"),
+    ["Comentários", num(soma(d, (x) => comentsDe(x).length)), "", false,
+      partes((k) => d.reduce((s, x) => s + (x[k]?.comentarios?.length || 0), 0))],
+  ];
+  return `<div class="numeros">${itens.map(([r, v, dl, sobe, pt]) => `
+    <div class="numero"><div class="rotulo">${r}</div><div class="valor">${v}</div>
+    ${pt ? `<div class="partes">${pt}</div>` : ""}
+    <div class="delta ${sobe || dl.startsWith("▲") ? "sobe" : ""}">${dl}</div></div>`).join("")}</div>`;
+}
+const soma = (lista, f) => lista.reduce((s, d) => s + (f(d) ?? 0), 0);
+
+function metricasPost(p) {
+  const ig = p.rede === "instagram";
+  return [
+    `${ig ? "❤️" : "👍"} ${num(p.curtidas)}`, `💬 ${num(p.comentarios)}`,
+    ig ? `🔖 ${num(p.salvamentos)}` : `↗️ ${num(p.compartilhamentos)}`,
+    `👀 ${num(p.alcance)} ${ig ? "contas" : "pessoas"}`,
+  ].map((t) => `<span>${t}</span>`).join("");
+}
+
+function listaPosts(limite) {
+  const posts = dias().flatMap(postsDe).reverse();
+  const ordem = periodo === "dia" ? posts : [...posts].sort((x, y) => (y.alcance ?? -1) - (x.alcance ?? -1));
+  if (!ordem.length) return `<div class="cartao vazio">Nenhum post ${nomePeriodo[periodo]}.</div>`;
+  return ordem.slice(0, limite).map((p) => `
+    <div class="cartao post">
+      ${p.imagem ? `<img class="foto" src="${esc(p.imagem)}" alt="">` : `<div class="foto" aria-hidden="true">${p.emoji || "📷"}</div>`}
+      <div class="info">
+        <div class="tipo">${REDES.length > 1 ? `${NOME_REDE[p.rede]} · ` : ""}${esc(p.tipo)} · ${fmtData(p.data)}</div>
+        <div class="legenda">${esc(p.legenda) || "<i>Sem legenda</i>"}</div>
+        <div class="metricas">${metricasPost(p)}
+          ${p.link ? `<span><a href="${esc(p.link)}" target="_blank" rel="noopener">abrir post</a></span>` : ""}
+        </div>
+      </div>
+    </div>`).join("");
+}
+
+function listaComentarios() {
+  const todos = dias().flatMap(comentsDe).reverse();
+  if (!todos.length) return `<div class="cartao vazio">Nenhum comentário ${nomePeriodo[periodo]}.</div>`;
+  const espera = todos.filter((c) => !c.respondido).length;
+  return `
+    <div class="cartao resumo-dia" style="margin-bottom:10px">
+      <b>${todos.length - espera} de ${todos.length}</b> comentários respondidos ${nomePeriodo[periodo]}${espera ? ` · <b>${espera}</b> aguardando resposta` : ""}.
+    </div>
+    <div class="cartao">${todos.slice(0, 12).map((c) => `
+      <div class="coment">
+        <div><div class="quem">${esc(c.quem)}${REDES.length > 1 ? ` · ${NOME_REDE[c.rede]}` : ""} · ${fmtData(c.data)}</div><div class="texto">${esc(c.texto)}</div></div>
+        <span class="estado ${c.respondido ? "ok" : "espera"}">${c.respondido ? "✓ Respondido" : "⏳ Aguardando"}</span>
+      </div>`).join("")}</div>`;
+}
+
+// Alcance por dia. Uma rede: barras simples (o título diz qual). "Ambos": barras
+// empilhadas Instagram (embaixo) + Facebook (em cima), com legenda e vão de 2px.
+const diasGrafico = () => (periodo === "dia" ? HISTORICO.slice(-7) : dias());
+function grafico() {
+  const d = diasGrafico(), redes = redesAtivas();
+  const L = 320, A = 150, base = A - 18;
+  const valor = (x, k) => x[k]?.alcance ?? 0;
+  const max = Math.max(...d.map((x) => redes.reduce((s, k) => s + valor(x, k), 0)));
+  // Escala "redonda" que acompanha o tamanho dos números (1, 2, 5, 10, ... 2.000)
+  const degrau = [1, 2, 5].flatMap((b) => [1, 10, 100, 1000, 10000].map((e) => b * e))
+    .sort((x, y) => x - y).find((s) => s * 4 >= max) || 10000;
+  const topo = Math.max(degrau, Math.ceil(max / degrau) * degrau);
+  const passo = L / d.length, larg = Math.max(3, passo - 2);
+  const y = (v) => base - (v / topo) * (base - 8);
+  const rot = (x, i) => (d.length <= 7 ? diaSemana(x.data) : i % 5 === 0 ? fmtData(x.data) : "");
+  const barras = d.map((x, i) => {
+    const bx = i * passo + (passo - larg) / 2;
+    let acum = 0, seg = "";
+    redes.forEach((k, j) => {
+      const v = valor(x, k);
+      if (!v) return;
+      const y0 = y(acum), y1 = y(acum + v), ultimo = !redes.slice(j + 1).some((kk) => valor(x, kk));
+      const r = ultimo ? Math.min(4, larg / 2, y0 - y1) : 0;
+      seg += `<path class="${k === "instagram" ? "ig" : "fb"}" d="M${bx},${y0} V${y1 + r} Q${bx},${y1} ${bx + r},${y1} H${bx + larg - r} Q${bx + larg},${y1} ${bx + larg},${y1 + r} V${y0} Z"/>`;
+      if (!ultimo) seg += `<rect class="vao" x="${bx}" y="${y1 - 1}" width="${larg}" height="2"/>`;
+      acum += v;
+    });
+    return `<g data-i="${i}">${seg}
+      <text class="eixo" x="${bx + larg / 2}" y="${A}" text-anchor="middle">${rot(x, i)}</text>
+      <rect class="alvo" x="${i * passo}" y="0" width="${passo}" height="${A}" data-i="${i}"/></g>`;
+  }).join("");
+  const grade = [0.5, 1].map((f) => `<line class="grade" x1="0" x2="${L}" y1="${y(topo * f)}" y2="${y(topo * f)}"/>
+    <text class="eixo" x="${L}" y="${y(topo * f) - 4}" text-anchor="end">${num(topo * f)}</text>`).join("");
+  const varias = redes.length > 1;
+  const titulo = varias ? "Alcance por dia" : `Alcance por dia${REDES.length > 1 ? ` · ${NOME_REDE[redes[0]]}` : ""}`;
+  return `<div class="cartao">
+    <div class="titulo-graf"><b>${titulo}</b><span>${redes[0] === "facebook" && !varias ? "pessoas alcançadas" : "contas alcançadas"}</span></div>
+    ${varias ? `<div class="legenda-graf">${redes.map((k) => `<span><i style="background:var(--serie-${k === "instagram" ? "ig" : "fb"})"></i>${NOME_REDE[k]}</span>`).join("")}</div>` : ""}
+    <div class="grafico" id="grafico">
+      <svg viewBox="0 0 ${L} ${A}" preserveAspectRatio="none" role="img" aria-label="${titulo}">${grade}<line class="grade" x1="0" x2="${L}" y1="${base}" y2="${base}"/>${barras}</svg>
+      <div class="dica" id="dica"></div>
+    </div>
+    <details class="tabela"><summary>Ver em tabela</summary><table>
+      <tr><th>Dia</th>${redes.map((k) => `<th>${varias ? NOME_REDE[k] : "Alcance"}</th>`).join("")}</tr>
+      ${d.map((x) => `<tr><td>${fmtData(x.data)}</td>${redes.map((k) => `<td>${num(x[k]?.alcance)}</td>`).join("")}</tr>`).join("")}
+    </table></details>
+  </div>`;
+}
+
+function ligarGrafico() {
+  const g = document.getElementById("grafico");
+  if (!g) return;
+  const d = diasGrafico(), redes = redesAtivas();
+  const dica = document.getElementById("dica");
+  const mostrar = (alvo) => {
+    const i = Number(alvo.dataset.i);
+    g.querySelectorAll("svg > g").forEach((b) => b.classList.toggle("ativa", Number(b.dataset.i) === i));
+    const r = alvo.getBoundingClientRect(), rg = g.getBoundingClientRect();
+    const valores = redes.map((k) => `${redes.length > 1 ? `${NOME_REDE[k]} ` : ""}${num(d[i][k]?.alcance)}`).join(" · ");
+    dica.innerHTML = `<b>${fmtData(d[i].data)}</b> · ${valores}`;
+    const svg = g.querySelector("svg").getBoundingClientRect();
+    const formas = [...g.querySelectorAll(`svg > g[data-i="${i}"] path`)];
+    const topoBarra = formas.length ? Math.min(...formas.map((f) => f.getBoundingClientRect().top)) : svg.bottom - 18;
+    dica.style.left = `${r.left - rg.left + r.width / 2}px`;
+    dica.style.top = `${topoBarra - rg.top}px`;
+    dica.classList.add("on");
+  };
+  g.querySelectorAll(".alvo").forEach((a) => {
+    a.addEventListener("pointerenter", () => mostrar(a));
+    a.addEventListener("click", () => mostrar(a));
+  });
+  g.addEventListener("pointerleave", () => { dica.classList.remove("on"); g.querySelectorAll("svg > g").forEach((b) => b.classList.remove("ativa")); });
+}
+
+function resumoTexto() {
+  const d = dias();
+  const posts = soma(d, (x) => postsDe(x).length);
+  const coment = soma(d, (x) => comentsDe(x).length);
+  const espera = soma(d, (x) => comentsDe(x).filter((c) => !c.respondido).length);
+  const onde = rede === "ambos" ? "" : ` no ${NOME_REDE[rede]}`;
+  return `<div class="cartao resumo-dia">
+    ${periodo === "dia" ? "Hoje" : periodo === "semana" ? "Nesta semana" : "Neste mês"}${onde}: <b>${posts} ${posts === 1 ? "post" : "posts"}</b>,
+    <b>${coment} ${coment === 1 ? "comentário" : "comentários"}</b>${espera ? ` (${espera} aguardando resposta)` : " (todos respondidos)"} e
+    <b>+${num(somaCampo(d, "novos"))} seguidores</b>.
+  </div>`;
+}
+
+// Anotações do gestor: do exemplo ou do cofre (gravadas com notas.py)
+const feitos = () => (EXEMPLO ? NOTAS : (NOTAS_REAIS?.feitos || []).map((n) => ({
+  quando: fmtData(new Date(`${n.data}T12:00:00`)), texto: n.texto })));
+const passos = () => (EXEMPLO ? PASSOS : NOTAS_REAIS?.passos || []);
+const notas = () => feitos().length ? `<div class="cartao">${feitos().slice(0, 8).map((n) => `
+  <div class="nota" style="margin-bottom:10px"><div class="ic" aria-hidden="true">✓</div>
+  <div><div class="quando">${esc(n.quando)}</div><p>${esc(n.texto)}</p></div></div>`).join("")}</div>`
+  : `<div class="cartao vazio">As anotações do gestor entram aqui.</div>`;
+const listaPassos = () => passos().length
+  ? `<div class="cartao"><ul class="passos">${passos().map((p) => `<li>${esc(p)}</li>`).join("")}</ul></div>`
+  : `<div class="cartao vazio">Os próximos passos entram aqui.</div>`;
+
+// ---------------------------------------------------------------- telas
+const TELAS = {
+  resumo: () => `
+    <section>${resumoTexto()}</section>
+    <section><h2>Números</h2>${cartoesNumeros()}</section>
+    <section><h2>Alcance</h2>${grafico()}</section>
+    <section><h2>${periodo === "dia" ? "Postado hoje" : "Melhores posts"}</h2>${listaPosts(3)}</section>
+    <section><h2>O que fizemos</h2>${notas()}</section>`,
+  posts: () => `<section><h2>${periodo === "dia" ? "Postado hoje" : "Posts do período (mais alcance primeiro)"}</h2>${listaPosts(40)}</section>`,
+  conversas: () => `<section><h2>Comentários e perguntas</h2>${listaComentarios()}</section>`,
+  relatorio: () => `
+    <section><h2>Relatório ${periodo === "dia" ? "do dia" : periodo === "semana" ? "da semana" : "do mês"}</h2>${resumoTexto()}</section>
+    <section>${cartoesNumeros()}</section>
+    <section>${grafico()}</section>
+    <section><h2>O que fizemos</h2>${notas()}</section>
+    <section><h2>Próximos passos</h2>${listaPassos()}</section>`,
+};
+
+function desenhar() {
+  desenharTopo();
+  document.getElementById("conteudo").innerHTML = TELAS[aba]() +
+    `<div class="rodape"><img src="marca/logo-vc-96.png" alt="">Marketing Essencial · Studio Vitor Campos</div>` +
+    (NOTAS_REAIS ? `<button class="sair" onclick="sair()">Sair deste aparelho</button>` : "");
+  ligarGrafico();
+}
+
+document.getElementById("atualizado").textContent =
+  `Atualizado em ${fmtData(HOJE)} às 23h00`;
+const grupo = (seletor, atributo, aplicar) => document.querySelectorAll(seletor).forEach((b) => b.addEventListener("click", () => {
+  aplicar(b.dataset[atributo]);
+  document.querySelectorAll(seletor).forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+  desenhar();
+}));
+grupo(".periodos button", "periodo", (v) => { periodo = v; });
+grupo(".redes button", "rede", (v) => { rede = v; });
+document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click", () => {
+  aba = b.dataset.aba;
+  document.querySelectorAll("nav button").forEach((x) => x.toggleAttribute("aria-current", x === b));
+  document.querySelectorAll("nav button[aria-current]").forEach((x) => x.setAttribute("aria-current", "page"));
+  window.scrollTo(0, 0);
+  desenhar();
+}));
+carregarReais().then(() => {
+  if (REDES.length === 1) rede = REDES[0];
+  desenhar();
+});
+
+// Instalável: o service worker guarda as telas para abrir rápido e offline
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>
