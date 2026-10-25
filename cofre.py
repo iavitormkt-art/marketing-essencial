@@ -47,27 +47,34 @@ def arquivos(cliente):
     return d / f"{cliente}.json", d / f"{cliente}.notas.json", d / f"{cliente}.enc.json"
 
 
+def cifrar(cliente, dados, sal=None):
+    """bytes -> envelope {v, iteracoes, sal, iv, dados} (o que vai para o repositório)."""
+    sal = sal or secrets.token_bytes(16)
+    iv = secrets.token_bytes(12)
+    cifrado = AESGCM(chave(senha_de(cliente), sal)).encrypt(iv, dados, None)
+    return {"v": 1, "iteracoes": ITERACOES, "sal": b64(sal), "iv": b64(iv), "dados": b64(cifrado)}
+
+
+def decifrar(cliente, envelope):
+    k = chave(senha_de(cliente), base64.b64decode(envelope["sal"]))
+    return AESGCM(k).decrypt(base64.b64decode(envelope["iv"]), base64.b64decode(envelope["dados"]), None)
+
+
 def abrir(cliente):
     """Devolve o conteúdo do cofre (ou vazio se ainda não existe)."""
     _, _, enc = arquivos(cliente)
     if not enc.exists():
         return {"historico": [], "notas": {"feitos": [], "passos": []}}
-    c = json.loads(enc.read_text(encoding="utf-8"))
-    k = chave(senha_de(cliente), base64.b64decode(c["sal"]))
-    texto = AESGCM(k).decrypt(base64.b64decode(c["iv"]), base64.b64decode(c["dados"]), None)
-    return json.loads(texto)
+    return json.loads(decifrar(cliente, json.loads(enc.read_text(encoding="utf-8"))))
 
 
 def fechar(cliente, conteudo):
     _, _, enc = arquivos(cliente)
     # Mantém o sal do cofre anterior: assim a chave lembrada nos aparelhos continua valendo
-    sal = base64.b64decode(json.loads(enc.read_text(encoding="utf-8"))["sal"]) if enc.exists() else secrets.token_bytes(16)
-    iv = secrets.token_bytes(12)
+    sal = base64.b64decode(json.loads(enc.read_text(encoding="utf-8"))["sal"]) if enc.exists() else None
     texto = json.dumps(conteudo, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    cifrado = AESGCM(chave(senha_de(cliente), sal)).encrypt(iv, texto, None)
     enc.parent.mkdir(exist_ok=True)
-    enc.write_text(json.dumps({"v": 1, "iteracoes": ITERACOES, "sal": b64(sal), "iv": b64(iv), "dados": b64(cifrado)}),
-                   encoding="utf-8")
+    enc.write_text(json.dumps(cifrar(cliente, texto, sal)), encoding="utf-8")
 
 
 def ler_json(caminho, padrao):

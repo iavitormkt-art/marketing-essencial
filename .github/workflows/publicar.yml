@@ -1,0 +1,44 @@
+# Robô de publicação: a cada 15 minutos publica no Instagram e no Facebook os
+# posts da agenda (agenda/<cliente>.enc.json) cuja hora já chegou.
+# O GitHub pode atrasar alguns minutos em relação ao horário marcado.
+name: Publicar agenda
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: escrita-no-repositorio
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install cryptography requests
+      - name: Publicar o que chegou na hora
+        env:
+          META_TOKEN: ${{ secrets.META_TOKEN }}
+          IG_STUDIO: ${{ secrets.IG_STUDIO }}
+          FB_STUDIO: ${{ secrets.FB_STUDIO }}
+          SENHA_STUDIO: ${{ secrets.SENHA_STUDIO }}
+        run: |
+          for c in studio; do
+            if [ -f "agenda/$c.enc.json" ]; then python agenda.py "$c" publicar; fi
+          done
+      - name: Gravar o status no repositório
+        run: |
+          git config user.name "robo-marketing-essencial"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add agenda
+          git diff --cached --quiet && exit 0
+          git commit -m "Publicação $(TZ=America/Sao_Paulo date '+%F %H:%M')"
+          git pull --rebase && git push
