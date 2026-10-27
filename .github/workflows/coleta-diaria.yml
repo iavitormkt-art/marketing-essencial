@@ -30,6 +30,7 @@ jobs:
           IG_STUDIO: ${{ secrets.IG_STUDIO }}
           FB_STUDIO: ${{ secrets.FB_STUDIO }}
           SENHA_STUDIO: ${{ secrets.SENHA_STUDIO }}
+          ACESSOS_STUDIO: ${{ secrets.ACESSOS_STUDIO }}
         # Um cliente novo = mais uma linha de segredos acima e o id na lista abaixo
         run: python robo.py studio
       - name: Gravar no repositório

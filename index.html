@@ -205,17 +205,18 @@ nav button[aria-current="page"] { color: var(--marca); }
 #entrada img { width: 88px; height: 88px; border-radius: 50%; }
 #entrada h1 { font-size: 20px; margin: 16px 0 4px; }
 #entrada p { margin: 0 0 18px; font-size: 14px; color: #a9c4cc; }
-#entrada input[type="password"] {
+#entrada input[type="password"], #entrada input[type="text"] {
   width: 100%; font: inherit; font-size: 16px; padding: 12px 14px; border-radius: 12px;
   border: 1px solid #12404f; background: #021c26; color: #e6f6f8;
 }
-#entrada input[type="password"]:focus { outline: 2px solid var(--ciano); outline-offset: 1px; }
+#entrada input:not([type="checkbox"]):focus { outline: 2px solid var(--ciano); outline-offset: 1px; }
 #entrada label { display: flex; gap: 8px; align-items: center; justify-content: center; font-size: 13px; color: #a9c4cc; margin: 12px 0; }
 #entrada button {
   width: 100%; border: 0; border-radius: 12px; padding: 12px; font: inherit; font-weight: 700;
   background: var(--ciano); color: #003346; cursor: pointer;
 }
 #entrada button:disabled { opacity: .7; }
+#entrada input[name="usuario"] { margin-bottom: 10px; }
 #entrada .erro { color: #ffa94d; font-size: 13px; min-height: 18px; margin-top: 10px; }
 </style>
 </head>
@@ -225,7 +226,8 @@ nav button[aria-current="page"] { color: var(--marca); }
     <img src="marca/logo-vc-96.png" alt="Studio Vitor Campos">
     <h1>Marketing Essencial</h1>
     <p>Digite a senha que você recebeu do Studio Vitor Campos.</p>
-    <input type="password" name="senha" autocomplete="current-password" aria-label="Senha" required>
+    <input type="text" name="usuario" autocomplete="username" autocapitalize="none" aria-label="Usuário" placeholder="Usuário" hidden>
+    <input type="password" name="senha" autocomplete="current-password" aria-label="Senha" placeholder="Senha" required>
     <label><input type="checkbox" name="lembrar" checked> Lembrar neste aparelho</label>
     <button type="submit">Entrar</button>
     <div class="erro" role="alert"></div>
@@ -345,14 +347,18 @@ let EXEMPLO = true;
 let REDES = ["instagram"];
 
 let NOTAS_REAIS = null;
-const CLIENTE = new URLSearchParams(location.search).get("cliente");
+const PARAMS = new URLSearchParams(location.search);
+const CLIENTE = PARAMS.get("cliente");
+// app?cliente=<id>&equipe: acesso extra da equipe, com usuário e senha próprios
+// (o cofre de cada um é dados/<cliente>.<usuario>.enc.json, gravado pelo cofre.py)
+const EQUIPE = PARAMS.has("equipe");
 
 // ---------------------------------------------------------------- cofre (dados criptografados)
 // Na internet só existe dados/<cliente>.enc.json, que abre com a senha do
 // cliente (PBKDF2-SHA256 + AES-256-GCM, igual ao cofre.py). A chave derivada
 // fica lembrada no aparelho; a senha em si nunca é guardada.
 const bytes = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-const LS = `me-chave-${CLIENTE}`;
+const LS = EQUIPE ? `me-equipe-${CLIENTE}` : `me-chave-${CLIENTE}`;
 const lsLer = () => { try { return JSON.parse(localStorage.getItem(LS)); } catch { return null; } };
 const lsGravar = (v) => { try { v ? localStorage.setItem(LS, JSON.stringify(v)) : localStorage.removeItem(LS); } catch { /* sem armazenamento */ } };
 
@@ -368,22 +374,35 @@ async function decifrar(cofre, chave) {
   return JSON.parse(new TextDecoder().decode(texto));
 }
 
+const buscarCofre = async (nome) => {
+  const r = await fetch(`dados/${encodeURIComponent(nome)}.enc.json`, { cache: "no-cache" });
+  return r.ok ? r.json() : null;
+};
+
 function pedirSenha(cofre) {
   const tela = document.getElementById("entrada");
   tela.hidden = false;
   const form = tela.querySelector("form"), erro = tela.querySelector(".erro"), botao = form.querySelector("button");
-  form.senha.focus();
+  if (EQUIPE) {
+    form.usuario.hidden = false; form.usuario.required = true;
+    tela.querySelector("p").textContent = "Acesso da equipe: digite seu usuário e sua senha.";
+  }
+  (EQUIPE ? form.usuario : form.senha).focus();
   return new Promise((resolver) => form.addEventListener("submit", async (e) => {
     e.preventDefault();
     erro.textContent = ""; botao.disabled = true; botao.textContent = "Abrindo…";
     try {
-      const chave = await derivar(form.senha.value.trim().toLowerCase(), cofre);
-      const conteudo = await decifrar(cofre, chave);
-      if (form.lembrar.checked) lsGravar({ sal: cofre.sal, chave: btoa(String.fromCharCode(...chave)) });
+      const usuario = form.usuario.value.trim().toLowerCase();
+      const alvo = EQUIPE ? await buscarCofre(`${CLIENTE}.${usuario}`) : cofre;
+      if (!alvo) throw new Error("usuário não existe");
+      const chave = await derivar(form.senha.value.trim().toLowerCase(), alvo);
+      const conteudo = await decifrar(alvo, chave);
+      if (form.lembrar.checked) lsGravar({ usuario, sal: alvo.sal, chave: btoa(String.fromCharCode(...chave)) });
       tela.hidden = true;
       resolver(conteudo);
     } catch {
-      erro.textContent = "Senha incorreta. Confira e tente de novo.";
+      erro.textContent = EQUIPE ? "Usuário ou senha incorretos. Confira e tente de novo."
+                                : "Senha incorreta. Confira e tente de novo.";
     }
     botao.disabled = false; botao.textContent = "Entrar";
   }));
@@ -397,10 +416,9 @@ async function carregarReais() {
   if (!CLIENTE) return;
   try {
     let dados;
-    const r = await fetch(`dados/${encodeURIComponent(CLIENTE)}.enc.json`, { cache: "no-cache" });
-    if (r.ok) {
-      const cofre = await r.json();
-      const salva = lsLer();
+    const salva = lsLer();
+    const cofre = await buscarCofre(EQUIPE && salva?.usuario ? `${CLIENTE}.${salva.usuario}` : CLIENTE);
+    if (cofre) {
       let conteudo = null;
       if (salva?.sal === cofre.sal) conteudo = await decifrar(cofre, bytes(salva.chave)).catch(() => null);
       conteudo ??= await pedirSenha(cofre);

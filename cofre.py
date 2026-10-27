@@ -12,6 +12,11 @@
 #   python cofre.py senha <cliente>    cria a senha do cliente no .env (SENHA_<CLIENTE>), se não existir
 #
 # A senha vem de SENHA_<CLIENTE> (no .env local ou nos segredos do GitHub). Nunca é impressa.
+#
+# Acessos extras (equipe, quem ajuda a testar): ACESSOS_<CLIENTE>=usuario:senha,outro:senha
+# Cada um ganha uma cópia do cofre em dados/<cliente>.<usuario>.enc.json, com a
+# própria senha, e entra pelo link app?cliente=<cliente>&equipe (pede usuário e senha).
+# Para tirar um acesso: apagar do ACESSOS_ e o arquivo dele.
 
 import base64
 import json
@@ -47,11 +52,18 @@ def arquivos(cliente):
     return d / f"{cliente}.json", d / f"{cliente}.notas.json", d / f"{cliente}.enc.json"
 
 
-def cifrar(cliente, dados, sal=None):
+def acessos(cliente):
+    """ACESSOS_<CLIENTE>=usuario:senha,... -> {usuario: senha} (usuário em minúsculas)."""
+    texto = ENV.get(f"ACESSOS_{cliente.upper()}", "")
+    pares = (item.split(":", 1) for item in texto.split(",") if ":" in item)
+    return {u.strip().lower(): s.strip() for u, s in pares if u.strip() and s.strip()}
+
+
+def cifrar(cliente, dados, sal=None, senha=None):
     """bytes -> envelope {v, iteracoes, sal, iv, dados} (o que vai para o repositório)."""
     sal = sal or secrets.token_bytes(16)
     iv = secrets.token_bytes(12)
-    cifrado = AESGCM(chave(senha_de(cliente), sal)).encrypt(iv, dados, None)
+    cifrado = AESGCM(chave(senha or senha_de(cliente), sal)).encrypt(iv, dados, None)
     return {"v": 1, "iteracoes": ITERACOES, "sal": b64(sal), "iv": b64(iv), "dados": b64(cifrado)}
 
 
@@ -70,11 +82,17 @@ def abrir(cliente):
 
 def fechar(cliente, conteudo):
     _, _, enc = arquivos(cliente)
-    # Mantém o sal do cofre anterior: assim a chave lembrada nos aparelhos continua valendo
-    sal = base64.b64decode(json.loads(enc.read_text(encoding="utf-8"))["sal"]) if enc.exists() else None
     texto = json.dumps(conteudo, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     enc.parent.mkdir(exist_ok=True)
-    enc.write_text(json.dumps(cifrar(cliente, texto, sal)), encoding="utf-8")
+    gravar_envelope(cliente, enc, texto)
+    for usuario, senha in acessos(cliente).items():
+        gravar_envelope(cliente, enc.with_name(f"{cliente}.{usuario}.enc.json"), texto, senha)
+
+
+def gravar_envelope(cliente, arquivo, texto, senha=None):
+    # Mantém o sal do cofre anterior: assim a chave lembrada nos aparelhos continua valendo
+    sal = base64.b64decode(json.loads(arquivo.read_text(encoding="utf-8"))["sal"]) if arquivo.exists() else None
+    arquivo.write_text(json.dumps(cifrar(cliente, texto, sal, senha)), encoding="utf-8")
 
 
 def ler_json(caminho, padrao):
