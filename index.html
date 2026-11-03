@@ -6,11 +6,21 @@
 <title>Marketing Essencial</title>
 <meta name="description" content="Acompanhamento diário do Instagram e do Facebook · Studio Vitor Campos">
 <meta name="theme-color" content="#003346">
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="manifest.webmanifest" id="manifesto">
+<script>
+// Cada cliente tem o próprio manifesto (manifest-<id>.webmanifest, gerado pelo
+// manifestos.py), para o app instalado abrir já no cliente certo.
+(function () {
+  var p = new URLSearchParams(location.search), c = p.get("cliente");
+  if (c && /^[a-z0-9-]+$/.test(c)) {
+    document.getElementById("manifesto").href = "manifest-" + c + (p.has("equipe") ? "-equipe" : "") + ".webmanifest";
+  }
+})();
+</script>
 <link rel="icon" href="favicon-32.png" type="image/png">
 <link rel="apple-touch-icon" href="icone-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Marketing Essencial">
+<meta name="apple-mobile-web-app-title" content="M. Essencial">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -218,9 +228,54 @@ nav button[aria-current="page"] { color: var(--marca); }
 #entrada button:disabled { opacity: .7; }
 #entrada input[name="usuario"] { margin-bottom: 10px; }
 #entrada .erro { color: #ffa94d; font-size: 13px; min-height: 18px; margin-top: 10px; }
+/* convite para instalar o app */
+#instalar {
+  position: fixed; left: 12px; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 25;
+  max-width: 460px; margin: 0 auto; background: #00283a; border: 1px solid #12404f; color: #e6f6f8; border-radius: 18px;
+  padding: 16px 16px 14px; box-shadow: 0 12px 32px rgba(0, 20, 30, .35);
+}
+#instalar[hidden] { display: none; }
+#instalar .cab { display: flex; gap: 12px; align-items: center; }
+#instalar .cab img { width: 48px; height: 48px; border-radius: 12px; }
+#instalar h2 { margin: 0; font-size: 16px; }
+#instalar p { margin: 2px 0 0; font-size: 13px; color: #a9c4cc; }
+#instalar ol { margin: 12px 0 4px; padding-left: 0; list-style: none; counter-reset: passo; font-size: 14px; }
+#instalar li { counter-increment: passo; display: flex; gap: 10px; align-items: center; padding: 6px 0; }
+#instalar li::before {
+  content: counter(passo); flex: none; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--ciano); color: #003346; font-weight: 800; font-size: 13px; display: grid; place-items: center;
+}
+#instalar li svg { flex: none; vertical-align: middle; }
+#instalar .acoes { display: flex; gap: 8px; margin-top: 12px; }
+#instalar .acoes button { flex: 1; border: 0; border-radius: 12px; padding: 11px; font: inherit; font-weight: 700; cursor: pointer; }
+#instalar .sim { background: var(--ciano); color: #003346; }
+#instalar .nao { background: transparent; color: #a9c4cc; border: 1px solid #12404f !important; }
+#instalar .seta { text-align: center; color: var(--ciano); font-size: 22px; margin-top: 6px; animation: pula 1.2s infinite; }
+@keyframes pula { 50% { transform: translateY(5px); } }
 </style>
 </head>
 <body>
+<div id="instalar" hidden role="dialog" aria-labelledby="instalar-titulo">
+  <div class="cab">
+    <img src="icone-192.png" alt="">
+    <div>
+      <h2 id="instalar-titulo">Instale o app no seu celular</h2>
+      <p>Abre com um toque, direto da tela inicial, como qualquer app.</p>
+    </div>
+  </div>
+  <ol class="passos-ios" hidden>
+    <li>Toque em <b>Compartilhar</b>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00fff9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="ícone Compartilhar"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg>
+      na barra do Safari</li>
+    <li>Escolha <b>Adicionar à Tela de Início</b></li>
+    <li>Toque em <b>Adicionar</b> e abra pelo ícone novo</li>
+  </ol>
+  <div class="acoes">
+    <button class="nao" type="button">Agora não</button>
+    <button class="sim" type="button">Instalar</button>
+  </div>
+  <div class="seta" aria-hidden="true" hidden>⬇</div>
+</div>
 <div id="entrada" hidden>
   <form autocomplete="on">
     <img src="marca/logo-vc-96.png" alt="Studio Vitor Campos">
@@ -348,10 +403,15 @@ let REDES = ["instagram"];
 
 let NOTAS_REAIS = null;
 const PARAMS = new URLSearchParams(location.search);
-const CLIENTE = PARAMS.get("cliente");
+// Sem ?cliente= na abertura (ex.: app instalado), volta ao último cliente aberto
+const ULTIMO = (() => { try { return JSON.parse(localStorage.getItem("me-ultimo")); } catch { return null; } })();
+const CLIENTE = PARAMS.get("cliente") || ULTIMO?.cliente || null;
 // app?cliente=<id>&equipe: acesso extra da equipe, com usuário e senha próprios
 // (o cofre de cada um é dados/<cliente>.<usuario>.enc.json, gravado pelo cofre.py)
-const EQUIPE = PARAMS.has("equipe");
+const EQUIPE = PARAMS.get("cliente") ? PARAMS.has("equipe") : !!ULTIMO?.equipe;
+if (PARAMS.get("cliente")) {
+  try { localStorage.setItem("me-ultimo", JSON.stringify({ cliente: CLIENTE, equipe: EQUIPE })); } catch { /* sem armazenamento */ }
+}
 
 // ---------------------------------------------------------------- cofre (dados criptografados)
 // Na internet só existe dados/<cliente>.enc.json, que abre com a senha do
@@ -714,6 +774,42 @@ carregarReais().then(() => {
   if (REDES.length === 1) rede = REDES[0];
   desenhar();
 });
+
+// ---------------------------------------------------------------- convite para instalar
+// Android/Chrome: botão "Instalar" usa o pedido nativo do navegador.
+// iPhone: a Apple não tem botão; mostramos o passo a passo do Safari.
+(function () {
+  const caixa = document.getElementById("instalar");
+  const instalado = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const adiado = (() => { try { return Number(localStorage.getItem("me-instalar-adiado")) || 0; } catch { return 0; } })();
+  if (instalado || Date.now() - adiado < 3 * 864e5) return; // "Agora não" vale por 3 dias
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const fechar = () => { caixa.hidden = true; try { localStorage.setItem("me-instalar-adiado", String(Date.now())); } catch { /* */ } };
+  caixa.querySelector(".nao").addEventListener("click", fechar);
+  if (ios) {
+    caixa.querySelector(".passos-ios").hidden = false;
+    caixa.querySelector(".seta").hidden = false;
+    const sim = caixa.querySelector(".sim");
+    sim.textContent = "Entendi";
+    sim.addEventListener("click", () => { caixa.hidden = true; });
+    setTimeout(() => { caixa.hidden = false; }, 1500);
+    return;
+  }
+  let pedido = null;
+  addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    pedido = e;
+    caixa.hidden = false;
+  });
+  caixa.querySelector(".sim").addEventListener("click", async () => {
+    if (!pedido) return;
+    pedido.prompt();
+    const { outcome } = await pedido.userChoice;
+    pedido = null;
+    if (outcome === "accepted") caixa.hidden = true; else fechar();
+  });
+  addEventListener("appinstalled", () => { caixa.hidden = true; });
+})();
 
 // Instalável: o service worker guarda as telas para abrir rápido e offline
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
