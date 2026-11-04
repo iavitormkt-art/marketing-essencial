@@ -10,6 +10,7 @@
 #                  --sem-garantia      (o CNPJ/CPF já usou a garantia de 30 dias)
 #   python assinatura.py <cliente> captacao-feita     (marca a captação bônus como feita)
 #   python assinatura.py <cliente> ver
+#   python assinatura.py <cliente> remover            (apaga a assinatura do cofre, ex.: depois de uma simulação)
 
 import json
 import sys
@@ -24,7 +25,7 @@ def opcao(args, nome, padrao=None):
 
 
 def main():
-    if len(sys.argv) < 3 or sys.argv[2] not in ("definir", "captacao-feita", "ver"):
+    if len(sys.argv) < 3 or sys.argv[2] not in ("definir", "captacao-feita", "ver", "remover"):
         print(__doc__ or open(__file__, encoding="utf-8").read().split("\n\n")[0])
         sys.exit(1)
     cliente, acao, args = sys.argv[1], sys.argv[2], sys.argv[3:]
@@ -48,8 +49,12 @@ def main():
     elif acao == "captacao-feita":
         assert a, "assinatura ainda não definida"
         a["captacaoFeita"] = True
-    if acao != "ver":
+    elif acao == "remover":
+        a = None
+        conteudo.pop("assinatura", None)
+    if acao in ("definir", "captacao-feita"):
         conteudo["assinatura"] = a
+    if acao != "ver":
         cofre.fechar(cliente, conteudo)
     print(json.dumps(a, ensure_ascii=False, indent=1))
 
