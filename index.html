@@ -203,6 +203,31 @@ nav button[aria-current="page"] { color: var(--marca); }
 .vazio { color: var(--texto-3); font-size: 14px; }
 .rodape { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: var(--texto-3); margin: 22px 0 8px; }
 .rodape img { width: 20px; height: 20px; border-radius: 50%; }
+/* configurações e assinatura (discreto: engrenagem no topo) */
+.engrenagem { margin-left: auto; border: 0; background: none; color: inherit; opacity: .6; padding: 6px; cursor: pointer; }
+.engrenagem svg { width: 20px; height: 20px; display: block; }
+.voltar-app { border: 0; background: none; color: var(--marca); font: inherit; font-size: 14px; font-weight: 600; padding: 0; margin-bottom: 12px; cursor: pointer; }
+.dados-ass { margin: 0; }
+.dados-ass div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--linha); font-size: 14px; }
+.dados-ass div:last-child { border-bottom: 0; }
+.dados-ass dt { color: var(--texto-2); }
+.dados-ass dd { margin: 0; font-weight: 600; text-align: right; }
+.cartao p { font-size: 14px; line-height: 1.5; margin: 0 0 10px; }
+.cartao p:last-child { margin-bottom: 0; }
+.botao-app { display: block; width: 100%; box-sizing: border-box; border: 0; border-radius: 12px; padding: 13px; font: inherit; font-weight: 700; font-size: 15px; cursor: pointer; text-align: center; text-decoration: none; margin-top: 12px; }
+.botao-app.primario { background: var(--marca); color: var(--sobre-marca, #fff); }
+.botao-app.secundario { background: var(--marca-suave, #e3f3f5); color: var(--texto); }
+.botao-app.perigo { background: #c92a2a; color: #fff; }
+.botao-app:disabled { opacity: .45; cursor: default; }
+.link-discreto { display: block; margin: 26px auto 0; border: 0; background: none; color: var(--texto-3); font: inherit; font-size: 12.5px; text-decoration: underline; cursor: pointer; }
+.motivos label { display: flex; gap: 10px; align-items: center; padding: 9px 0; font-size: 14.5px; cursor: pointer; }
+.motivos textarea { width: 100%; box-sizing: border-box; min-height: 70px; margin-top: 6px; border: 1px solid var(--linha); border-radius: 10px; padding: 10px; font: inherit; font-size: 14px; background: var(--fundo); color: var(--texto); }
+.conta { width: 100%; border-collapse: collapse; font-size: 14px; }
+.conta td { padding: 7px 0; border-bottom: 1px solid var(--linha); vertical-align: top; }
+.conta td:last-child { text-align: right; white-space: nowrap; padding-left: 10px; font-weight: 600; }
+.conta tr.total td { border-bottom: 0; font-size: 16px; font-weight: 800; padding-top: 12px; }
+.lista-simples { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.55; }
+.aceite-canc { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; line-height: 1.45; margin-top: 4px; cursor: pointer; }
 .sair { display: block; margin: 0 auto 8px; border: 0; background: none; color: var(--texto-3); font: inherit; font-size: 12px; text-decoration: underline; cursor: pointer; }
 
 /* entrada com senha */
@@ -299,6 +324,9 @@ nav button[aria-current="page"] { color: var(--marca); }
         <h1>Moranguinho Confeitaria</h1>
         <div class="sub" id="atualizado"></div>
       </div>
+      <button class="engrenagem" type="button" aria-label="Configurações" onclick="irAba('config')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      </button>
     </div>
     <p class="exemplo">Protótipo com dados de exemplo. Na versão real, os números vêm direto do Instagram e do Facebook.</p>
     <div class="redes" role="group" aria-label="Rede" hidden>
@@ -402,6 +430,7 @@ let EXEMPLO = true;
 let REDES = ["instagram"];
 
 let NOTAS_REAIS = null;
+let ASSINATURA_REAL = null;
 const PARAMS = new URLSearchParams(location.search);
 // Sem ?cliente= na abertura (ex.: app instalado), volta ao último cliente aberto
 const ULTIMO = (() => { try { return JSON.parse(localStorage.getItem("me-ultimo")); } catch { return null; } })();
@@ -484,6 +513,7 @@ async function carregarReais() {
       conteudo ??= await pedirSenha(cofre);
       dados = conteudo.historico;
       NOTAS_REAIS = conteudo.notas;
+      ASSINATURA_REAL = conteudo.assinatura || null;
     } else {
       const r2 = await fetch(`dados/${encodeURIComponent(CLIENTE)}.json`, { cache: "no-cache" });
       if (!r2.ok) return;
@@ -746,9 +776,165 @@ const TELAS = {
     <section><h2>Próximos passos</h2>${listaPassos()}</section>`,
 };
 
+// ---------------------------------------------------------------- assinatura e cancelamento
+// Configurações → Minha assinatura → Cancelar assinatura (Cláusula 12 do contrato).
+// Etapa 1 (sem servidor): o app calcula os valores e o pedido vai para o WhatsApp do
+// Vitor, que confirma em até 1 dia útil e faz a cobrança ou a devolução no Asaas.
+// Os dados vêm do cofre ("assinatura", gravada com assinatura.py).
+const WHATS_STUDIO = "5561992163078";
+const LINK_CONTRATO = "https://studiovitorcampos.com.br/contrato/";
+const NOME_FORMA = { pix: "Pix à vista", cartao: "Cartão parcelado", mensal: "Cartão mês a mês" };
+const brl = (v) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const dataBR = (d) => d.toLocaleDateString("pt-BR");
+const diaISO = (s) => new Date(`${s}T12:00:00`);
+function assinaturaExemplo() {
+  const inicio = new Date(); inicio.setDate(inicio.getDate() - 75);
+  return { plano: "Essencial+", mensal: 1197, prazo: 6, forma: "mensal", inicio: inicio.toISOString().slice(0, 10),
+    implantacao: 497, pago: null, captacao: 0, captacaoFeita: false, garantia: true };
+}
+const assinatura = () => (NOTAS_REAIS ? ASSINATURA_REAL : assinaturaExemplo());
+function somarMeses(d, n) { const x = new Date(d); x.setMonth(x.getMonth() + n); return x; }
+function situacao(a, hoje = new Date()) {
+  const ini = diaISO(a.inicio);
+  let completos = (hoje.getFullYear() - ini.getFullYear()) * 12 + hoje.getMonth() - ini.getMonth();
+  if (hoje.getDate() < ini.getDate()) completos--;
+  const dias = Math.floor((hoje - ini) / 864e5);
+  const fim = somarMeses(ini, a.prazo); fim.setDate(fim.getDate() - 1);
+  return { ini, fim, dias, mes: Math.max(1, completos + 1) };
+}
+// Valores do cancelamento pela Cláusula 12 (4 = garantia; 12.2 = antes do fim do prazo; 12.4 = depois)
+function calculoCancelamento(a) {
+  const s = situacao(a);
+  if (a.garantia && s.dias <= 30) {
+    const pago = a.forma === "mensal" ? a.mensal : a.pago;
+    return { tipo: "garantia", s, linhas: [["Garantia de 30 dias: devolução de tudo o que foi pago", pago]], total: pago, sentido: "devolver" };
+  }
+  if (s.mes > a.prazo) return { tipo: "livre", s, linhas: [], total: 0 };
+  const faltam = a.prazo - s.mes;
+  const multa = 0.2 * faltam * a.mensal;
+  const impl = a.prazo >= 6 ? 0.5 * a.implantacao : 0;
+  const capt = a.prazo === 12 && a.captacaoFeita ? a.captacao : 0;
+  const custos = [];
+  if (faltam) custos.push([`Multa: 20% das ${faltam} mensalidade${faltam === 1 ? "" : "s"} que falta${faltam === 1 ? "" : "m"} (${faltam} × ${brl(a.mensal)} × 20%)`, multa]);
+  if (impl) custos.push([`50% da implantação, que foi isenta (${brl(a.implantacao)} × 50%)`, impl]);
+  if (capt) custos.push(["Captação de fotos e vídeos (bônus já usado)", capt]);
+  const soma = custos.reduce((t, [, v]) => t + v, 0);
+  if (a.forma === "mensal") return { tipo: "multa", s, faltam, linhas: custos, total: soma, sentido: "cobrar" };
+  const usados = s.mes * a.mensal;
+  const saldo = a.pago - usados - soma;
+  return { tipo: "multa", s, faltam, sentido: "devolver", total: Math.max(0, saldo),
+    linhas: [["Valor pago pelo período", a.pago], [`Meses já iniciados (${s.mes} × ${brl(a.mensal)})`, -usados], ...custos.map(([t, v]) => [t, -v])] };
+}
+
+let cancEtapa = 1, cancMotivo = "", cancObs = "";
+function irAba(nome) {
+  aba = nome;
+  if (nome === "cancelar") cancEtapa = 1;
+  document.querySelectorAll("nav button").forEach((x) => {
+    if (x.dataset.aba === nome) x.setAttribute("aria-current", "page"); else x.removeAttribute("aria-current");
+  });
+  window.scrollTo(0, 0);
+  desenhar();
+}
+function cancPasso(n) { cancEtapa = n; window.scrollTo(0, 0); desenhar(); }
+
+function telaConfig() {
+  const a = assinatura();
+  const voltar = `<button class="voltar-app" onclick="irAba('resumo')">← Voltar</button>`;
+  if (!a) return `${voltar}<section><h2>Minha assinatura</h2><div class="cartao vazio">Os dados da sua assinatura aparecem aqui depois da contratação.</div></section>`;
+  const s = situacao(a);
+  return `${voltar}
+    <section><h2>Minha assinatura</h2>
+      ${NOTAS_REAIS ? "" : `<p class="vazio" style="margin:0 0 8px">Exemplo de como a tela aparece para o cliente.</p>`}
+      <div class="cartao"><dl class="dados-ass">
+        <div><dt>Plano</dt><dd>${esc(a.plano)}</dd></div>
+        <div><dt>Mensalidade</dt><dd>${brl(a.mensal)}</dd></div>
+        <div><dt>Pagamento</dt><dd>${NOME_FORMA[a.forma]}</dd></div>
+        <div><dt>Contrato</dt><dd>${a.prazo} meses</dd></div>
+        <div><dt>Vigência</dt><dd>${dataBR(s.ini)} a ${dataBR(s.fim)}</dd></div>
+        <div><dt>Mês atual</dt><dd>${s.mes > a.prazo ? "renovação mês a mês" : `${s.mes}º de ${a.prazo}`}</dd></div>
+      </dl></div>
+    </section>
+    <section><h2>Ajuda</h2>
+      <div class="cartao"><p>Quer mudar de plano, trocar o cartão ou tirar uma dúvida? Fale direto com o Vitor.</p>
+        <a class="botao-app secundario" href="https://wa.me/${WHATS_STUDIO}" target="_blank" rel="noopener">Falar no WhatsApp</a>
+        <a class="botao-app secundario" href="${LINK_CONTRATO}" target="_blank" rel="noopener">Ver o contrato</a>
+      </div>
+    </section>
+    <button class="link-discreto" onclick="irAba('cancelar')">Cancelar assinatura</button>`;
+}
+
+const MOTIVOS = ["O valor está pesado agora", "Não vi o resultado que esperava", "Vou cuidar das redes por conta própria", "Vou fechar ou pausar o negócio", "Outro motivo"];
+function telaCancelar() {
+  const a = assinatura();
+  if (!a) return telaConfig();
+  const c = calculoCancelamento(a);
+  const voltar = (dest) => `<button class="voltar-app" onclick="${dest}">← Voltar</button>`;
+  if (cancEtapa === 1) return `${voltar("irAba('config')")}
+    <section><h2>Cancelar assinatura</h2>
+      <div class="cartao"><p>Que pena que você está pensando em sair. Conta pra gente o motivo? Isso ajuda a melhorar o serviço.</p>
+        <div class="motivos">${MOTIVOS.map((m) => `<label><input type="radio" name="motivo" value="${esc(m)}" ${cancMotivo === m ? "checked" : ""} onchange="cancMotivo=this.value;document.getElementById('seguir').disabled=false">${esc(m)}</label>`).join("")}
+          <textarea placeholder="Quer contar mais? (opcional)" oninput="cancObs=this.value">${esc(cancObs)}</textarea></div>
+        <button class="botao-app primario" id="seguir" ${cancMotivo ? "" : "disabled"} onclick="cancPasso(2)">Continuar</button>
+      </div>
+    </section>
+    <section><div class="cartao"><p><b>Antes de decidir:</b> muitas vezes dá para ajustar, trocando de plano ou mudando o foco do conteúdo.</p>
+      <a class="botao-app secundario" href="https://wa.me/${WHATS_STUDIO}?text=${encodeURIComponent("Oi, Vitor! Estou pensando em mudar algumas coisas no meu plano do Marketing Essencial. Podemos conversar?")}" target="_blank" rel="noopener">Conversar com o Vitor antes</a></div></section>`;
+  if (cancEtapa === 2) {
+    const titulo = c.tipo === "garantia" ? "Você está na garantia de 30 dias"
+      : c.tipo === "livre" ? "Seu contrato já cumpriu o prazo" : `Valores do cancelamento (mês ${c.s.mes} de ${a.prazo})`;
+    const explica = c.tipo === "garantia" ? "Você cancela sem multa e recebe de volta tudo o que pagou, em até 7 dias úteis, pelo mesmo meio de pagamento. As próximas cobranças são canceladas."
+      : c.tipo === "livre" ? "Você pode cancelar sem multa. O serviço segue por mais 30 dias depois do pedido, como diz o contrato (Cláusula 2.2), e depois as cobranças param."
+      : a.forma === "mensal" ? `As próximas cobranças mensais são canceladas. Pela Cláusula 12.2 do contrato, o valor abaixo é cobrado <b>uma única vez no seu cartão cadastrado</b>.`
+      : `Pela Cláusula 12.2 do contrato, devolvemos o que você pagou adiantado, descontados os valores abaixo, em até 7 dias úteis.`;
+    const conta = c.linhas.length ? `<table class="conta">${c.linhas.map(([t, v]) => `<tr><td>${esc(t)}</td><td>${brl(v)}</td></tr>`).join("")}
+      <tr class="total"><td>${c.sentido === "cobrar" ? "Total cobrado no cartão" : "Total a receber de volta"}</td><td>${brl(c.total)}</td></tr></table>` : "";
+    return `${voltar("cancPasso(1)")}
+      <section><h2>${titulo}</h2><div class="cartao"><p>${explica}</p>${conta}</div></section>
+      <section><h2>O que continua com você</h2><div class="cartao"><ul class="lista-simples">
+        <li>Todos os posts publicados ficam nos seus perfis.</li>
+        <li>As automações de atendimento continuam funcionando (sem manutenção).</li>
+        <li>Você recebe o documento das automações e um relatório final em até 7 dias úteis.</li></ul></div></section>
+      <section><h2>O que é encerrado</h2><div class="cartao"><ul class="lista-simples">
+        <li>Criação e publicação de conteúdo, monitoramento e relatórios.</li>
+        <li>Este app e os acessos do Studio às suas contas (removidos em até 7 dias).</li></ul></div></section>
+      <section><div class="cartao">
+        <label class="aceite-canc"><input type="checkbox" onchange="document.getElementById('confirmar').disabled=!this.checked">
+          <span>Li e concordo com os valores acima, conforme a <a href="${LINK_CONTRATO}" target="_blank" rel="noopener">Cláusula 12 do contrato</a>${c.sentido === "cobrar" && c.total ? ", e autorizo a cobrança no meu cartão cadastrado" : ""}.</span></label>
+        <button class="botao-app perigo" id="confirmar" disabled onclick="enviarCancelamento()">Confirmar cancelamento</button>
+        <button class="botao-app secundario" onclick="irAba('resumo')">Desistir e continuar com o serviço</button>
+      </div></section>`;
+  }
+  return `<section><h2>Falta só um passo</h2><div class="cartao">
+      <p>Abrimos o WhatsApp com o seu pedido de cancelamento já escrito. <b>Toque em enviar</b> para concluir.</p>
+      <p>O Vitor confirma em até 1 dia útil${c.total ? (c.sentido === "cobrar" ? " e faz a cobrança" : " e faz a devolução") : ""}. Obrigado por ter caminhado com a gente até aqui!</p>
+      <button class="botao-app secundario" onclick="enviarCancelamento()">Abrir o WhatsApp de novo</button>
+      <button class="botao-app secundario" onclick="irAba('resumo')">Voltar ao início</button></div></section>`;
+}
+function enviarCancelamento() {
+  const a = assinatura(), c = calculoCancelamento(a);
+  const perfil = document.querySelector(".topo h1").textContent;
+  const texto = [
+    "Olá, Vitor. Quero cancelar o Marketing Essencial.", "",
+    `Cliente: ${perfil}${CLIENTE ? ` (${CLIENTE})` : ""}`,
+    `Plano: ${a.plano}, ${brl(a.mensal)}/mês, ${NOME_FORMA[a.forma].toLowerCase()}`,
+    `Contrato: ${a.prazo} meses, desde ${dataBR(c.s.ini)} (mês ${c.s.mes})`,
+    `Motivo: ${cancMotivo}${cancObs.trim() ? ` (${cancObs.trim()})` : ""}`,
+    c.tipo === "garantia" ? `Garantia de 30 dias: devolução de ${brl(c.total)}`
+      : c.tipo === "livre" ? "Contrato já cumpriu o prazo: cancelamento sem multa, com aviso de 30 dias"
+      : c.sentido === "cobrar" ? `Valor do cancelamento (Cláusula 12.2): ${brl(c.total)}, que autorizo cobrar no meu cartão cadastrado`
+      : `Valor a devolver (Cláusula 12.2): ${brl(c.total)}`,
+    "Li e concordei com os valores no app.",
+  ].join("\n");
+  const janela = window.open(`https://wa.me/${WHATS_STUDIO}?text=${encodeURIComponent(texto)}`, "_blank");
+  if (janela) janela.opener = null;
+  if (cancEtapa !== 3) cancPasso(3);
+}
+
 function desenhar() {
   desenharTopo();
-  document.getElementById("conteudo").innerHTML = TELAS[aba]() +
+  const tela = aba === "config" ? telaConfig : aba === "cancelar" ? telaCancelar : TELAS[aba];
+  document.getElementById("conteudo").innerHTML = tela() +
     `<div class="rodape"><img src="marca/logo-vc-96.png" alt="">Marketing Essencial · Studio Vitor Campos</div>` +
     (NOTAS_REAIS ? `<button class="sair" onclick="sair()">Sair deste aparelho</button>` : "");
   ligarGrafico();

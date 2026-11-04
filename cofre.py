@@ -4,7 +4,8 @@
 # abre com a senha do cliente (AES-256-GCM, chave derivada da senha com
 # PBKDF2-SHA256). O app pede a senha uma vez e lembra no aparelho.
 #
-# Conteúdo do cofre: {"historico": [...registros do coletor...], "notas": {"feitos": [...], "passos": [...]}}
+# Conteúdo do cofre: {"historico": [...registros do coletor...], "notas": {"feitos": [...], "passos": [...]},
+#                     "assinatura": {...} (opcional, gravada pelo assinatura.py)}
 #
 # Uso:
 #   python cofre.py fechar <cliente>   dados/<cliente>.json (+ notas) -> dados/<cliente>.enc.json
@@ -138,7 +139,9 @@ def main():
         notas.write_text(json.dumps(conteudo["notas"], ensure_ascii=False, indent=1), encoding="utf-8")
         print(f"{cliente}: cofre aberto ({len(conteudo['historico'])} dias)")
     else:
-        conteudo = {"historico": ler_json(historico, []), "notas": ler_json(notas, {"feitos": [], "passos": []})}
+        # mantém o que só existe no cofre (ex.: "assinatura", gravada pelo assinatura.py)
+        conteudo = abrir(cliente) if _.exists() else {}
+        conteudo.update({"historico": ler_json(historico, []), "notas": ler_json(notas, {"feitos": [], "passos": []})})
         fechar(cliente, conteudo)
         print(f"{cliente}: cofre fechado ({len(conteudo['historico'])} dias, "
               f"{len(conteudo['notas']['feitos'])} anotações)")
