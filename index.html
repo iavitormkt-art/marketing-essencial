@@ -97,7 +97,7 @@ header { position: sticky; top: 0; z-index: 5; background: var(--fundo); padding
   background: var(--aviso-suave); color: var(--aviso); font-size: 12.5px; font-weight: 600;
 }
 .redes { display: flex; gap: 6px; margin-top: 12px; }
-.redes[hidden] { display: none; }
+.redes[hidden], .periodos[hidden] { display: none; }
 .redes button {
   display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--linha); background: var(--cartao);
   color: var(--texto-2); font: inherit; font-size: 13px; font-weight: 600; padding: 6px 12px; border-radius: 99px; cursor: pointer;
@@ -934,6 +934,9 @@ function enviarCancelamento() {
 function desenhar() {
   desenharTopo();
   const tela = aba === "config" ? telaConfig : aba === "cancelar" ? telaCancelar : TELAS[aba];
+  const naConfig = aba === "config" || aba === "cancelar";
+  document.querySelector(".periodos").hidden = naConfig;
+  if (naConfig) document.querySelector(".redes").hidden = true;
   document.getElementById("conteudo").innerHTML = tela() +
     `<div class="rodape"><img src="marca/logo-vc-96.png" alt="">Marketing Essencial · Studio Vitor Campos</div>` +
     (NOTAS_REAIS ? `<button class="sair" onclick="sair()">Sair deste aparelho</button>` : "");
