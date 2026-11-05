@@ -11,6 +11,8 @@
 #   python cofre.py fechar <cliente>   dados/<cliente>.json (+ notas) -> dados/<cliente>.enc.json
 #   python cofre.py abrir <cliente>    dados/<cliente>.enc.json -> dados/<cliente>.json (para o coletor)
 #   python cofre.py senha <cliente>    cria a senha do cliente no .env (SENHA_<CLIENTE>), se não existir
+#   python cofre.py logo <cliente> <imagem> [--fundo #RRGGBB]   foto de perfil no app (círculo com a logo)
+#   python cofre.py gestor             refaz dados/gestor.enc.json (lista de clientes + senhas, cifrada com SENHA_GESTOR)
 #   python cofre.py trocar-senha <cliente> <nova>   troca a senha (pedido do app pelo WhatsApp) e refaz o cofre
 #
 # A senha vem de SENHA_<CLIENTE> (no .env local ou nos segredos do GitHub). Nunca é impressa.
@@ -125,6 +127,53 @@ def criar_senha(cliente):
     print(f"{nome} criada no .env")
 
 
+def gravar_logo(cliente, imagem, fundo=None):
+    """Logo do cliente num círculo (com fundo opcional), guardada no cofre como data URL."""
+    import io
+    from PIL import Image, ImageDraw
+    lg = Image.open(imagem).convert("RGBA")
+    lg = lg.crop(lg.getbbox() or (0, 0, *lg.size))
+    n = 192
+    base = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+    if fundo:
+        mascara = Image.new("L", (n, n), 0)
+        ImageDraw.Draw(mascara).ellipse((0, 0, n - 1, n - 1), fill=255)
+        base.paste(Image.new("RGBA", (n, n), fundo), (0, 0), mascara)
+    escala = min(n * 0.92 / lg.width, n * 0.92 / lg.height)
+    lg = lg.resize((round(lg.width * escala), round(lg.height * escala)), Image.LANCZOS)
+    base.alpha_composite(lg, ((n - lg.width) // 2, (n - lg.height) // 2))
+    buf = io.BytesIO()
+    base.save(buf, "WEBP", quality=90)
+    conteudo = abrir(cliente)
+    conteudo["logo"] = "data:image/webp;base64," + b64(buf.getvalue())
+    fechar(cliente, conteudo)
+    atualizar_gestor()
+    print(f"{cliente}: logo gravada no cofre ({len(buf.getvalue()) // 1024} KB)")
+
+
+def atualizar_gestor():
+    """Cofre da área do gestor (app?gestor): clientes com cofre + senha de cada um,
+    cifrado com SENHA_GESTOR. Refeito ao trocar senha ou criar cliente."""
+    mestra = ENV.get("SENHA_GESTOR")
+    if not mestra:
+        return
+    clientes = []
+    for enc in sorted((PASTA / "dados").glob("*.enc.json")):
+        cid = enc.name[:-len(".enc.json")]
+        senha = ENV.get(f"SENHA_{cid.upper()}")
+        if "." in cid or cid == "gestor" or not senha:
+            continue
+        try:
+            dados = json.loads(decifrar(cid, json.loads(enc.read_text(encoding="utf-8"))))
+            nome = dados.get("nome") or cid.capitalize()
+        except Exception:
+            continue
+        clientes.append({"id": cid, "nome": nome, "senha": senha, "logo": dados.get("logo")})
+    texto = json.dumps({"clientes": clientes}, ensure_ascii=False).encode("utf-8")
+    gravar_envelope("gestor", PASTA / "dados" / "gestor.enc.json", texto, mestra)
+    print(f"cofre do gestor refeito ({len(clientes)} clientes)")
+
+
 def trocar_senha(cliente, nova):
     """Abre o cofre com a senha atual, grava a nova no .env e fecha o cofre com ela."""
     nova = nova.strip().lower()
@@ -144,18 +193,24 @@ def trocar_senha(cliente, nova):
     arquivo.write_text("\n".join(linhas) + "\n", encoding="utf-8")
     ENV[nome] = nova
     fechar(cliente, conteudo)
+    atualizar_gestor()
     print(f"{nome} trocada e cofre refeito. Falta publicar (commit + push).")
     print(f"Se o cliente estiver no robô diário, atualize também o segredo {nome} no GitHub.")
 
 
 def main():
-    if len(sys.argv) < 3 or sys.argv[1] not in ("fechar", "abrir", "senha", "trocar-senha"):
+    acoes = ("fechar", "abrir", "senha", "trocar-senha", "gestor", "logo")
+    if len(sys.argv) < 2 or sys.argv[1] not in acoes or (sys.argv[1] != "gestor" and len(sys.argv) < 3):
         print(__doc__)
         sys.exit(1)
-    acao, cliente = sys.argv[1], sys.argv[2]
+    acao, cliente = sys.argv[1], (sys.argv[2] if len(sys.argv) > 2 else "gestor")
     historico, notas, _ = arquivos(cliente)
     if acao == "senha":
         criar_senha(cliente)
+    elif acao == "logo":
+        gravar_logo(cliente, sys.argv[3], sys.argv[sys.argv.index("--fundo") + 1] if "--fundo" in sys.argv else None)
+    elif acao == "gestor":
+        atualizar_gestor()
     elif acao == "trocar-senha":
         trocar_senha(cliente, sys.argv[3])
     elif acao == "abrir":

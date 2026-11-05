@@ -12,7 +12,11 @@
 // manifestos.py), para o app instalado abrir já no cliente certo.
 (function () {
   var p = new URLSearchParams(location.search), c = p.get("cliente");
-  if (c && /^[a-z0-9-]+$/.test(c)) {
+  if (p.has("gestor")) {
+    // Área do gestor: app separado na tela do celular do Vitor (manifest-gestor.webmanifest)
+    document.getElementById("manifesto").href = "manifest-gestor.webmanifest";
+    document.title = "ME Gestor";
+  } else if (c && /^[a-z0-9-]+$/.test(c)) {
     document.getElementById("manifesto").href = "manifest-" + c + (p.has("equipe") ? "-equipe" : "") + ".webmanifest";
   }
 })();
@@ -21,6 +25,11 @@
 <link rel="apple-touch-icon" href="icone-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="M. Essencial">
+<script>
+if (new URLSearchParams(location.search).has("gestor")) {
+  document.querySelector('meta[name="apple-mobile-web-app-title"]').content = "ME Gestor";
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -85,7 +94,7 @@ body {
 header { position: sticky; top: 0; z-index: 5; background: var(--fundo); padding: 12px 0 10px; }
 .topo { display: flex; align-items: center; gap: 12px; }
 .avatar {
-  width: 44px; height: 44px; border-radius: 50%; flex: none; overflow: hidden;
+  width: 50px; height: 50px; border-radius: 50%; flex: none; overflow: hidden;
   background: var(--marca-suave); color: var(--marca);
   display: grid; place-items: center; font-weight: 800; font-size: 18px;
 }
@@ -204,6 +213,14 @@ nav button[aria-current="page"] { color: var(--marca); }
 .rodape { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: var(--texto-3); margin: 22px 0 8px; }
 .rodape img { width: 20px; height: 20px; border-radius: 50%; }
 /* configurações e assinatura (discreto: engrenagem no topo) */
+body.seletor nav, body.seletor .periodos, body.seletor .redes, body.seletor .sino,
+body.seletor .engrenagem, body.seletor .exemplo { display: none !important; }
+.faixa a { color: var(--ciano); font-weight: 700; margin-left: auto; text-decoration: none; }
+.cliente-item { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--linha); background: none; color: inherit; font: inherit; padding: 14px 0; cursor: pointer; text-decoration: none; }
+.cliente-item:last-child { border-bottom: 0; }
+.cliente-item .avatar { flex: none; }
+.cliente-item b { display: block; font-size: 15px; }
+.cliente-item span.sub { font-size: 12.5px; color: var(--texto-3); }
 .sino { margin-left: auto; position: relative; border: 0; background: none; color: inherit; padding: 6px; cursor: pointer; }
 .sino svg { width: 22px; height: 22px; display: block; }
 .sino .contador { position: absolute; top: 0; right: -2px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: #e02424; color: #fff; font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; box-shadow: 0 0 0 2px var(--fundo, #fff); }
@@ -212,7 +229,10 @@ nav button[aria-current="page"] { color: var(--marca); }
 .msg .ic { width: 30px; height: 30px; border-radius: 50%; background: var(--marca-suave); color: var(--marca); display: grid; place-items: center; flex: none; font-size: 14px; }
 .msg p { margin: 2px 0 0; font-size: 14px; line-height: 1.45; }
 .msg .quando { font-size: 12px; color: var(--texto-3); }
-.msg.nova p { font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.msg p { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.msg.nova p { font-weight: 700; }
+.msg.aberta p { display: block; -webkit-line-clamp: unset; overflow: visible; }
+.msg .abrir { font-size: 12px; color: var(--marca); font-weight: 600; margin-top: 3px; display: block; }
 .msg.nova .quando::after { content: " · nova"; color: #e02424; font-weight: 700; }
 .msg .ponto { width: 9px; height: 9px; border-radius: 50%; background: #e02424; flex: none; margin-top: 10px; }
 .campo-senha { width: 100%; box-sizing: border-box; border: 1px solid var(--linha); border-radius: 10px; padding: 12px; font: inherit; font-size: 16px; background: var(--fundo); color: var(--texto); margin-top: 8px; }
@@ -447,16 +467,22 @@ let REDES = ["instagram"];
 
 let NOTAS_REAIS = null;
 let ASSINATURA_REAL = null;
+let LOGO_CLIENTE = ""; // foto de perfil no app (cofre "logo", gravada com cofre.py logo)
 let NOME_CLIENTE = ""; // nome de exibição gravado no cofre ("nome"), usado antes de haver dados
 let IMPLANTACAO = false; // cliente com cofre, mas o Instagram/Facebook ainda não foi ligado
 const PARAMS = new URLSearchParams(location.search);
 // Sem ?cliente= na abertura (ex.: app instalado), volta ao último cliente aberto
 const ULTIMO = (() => { try { return JSON.parse(localStorage.getItem("me-ultimo")); } catch { return null; } })();
-const CLIENTE = PARAMS.get("cliente") || ULTIMO?.cliente || null;
+// app?gestor: área do gestor (só no celular do Vitor, com a senha de gestor).
+// app?gestor&cliente=<id>: o app do cliente, exatamente como ele vê.
+const GESTOR = PARAMS.has("gestor");
+let GESTOR_DADOS = null; // {clientes: [{id, nome, senha}]}, do cofre dados/gestor.enc.json
+let SELETOR = false;     // área do gestor sem cliente escolhido: lista de clientes
+const CLIENTE = GESTOR ? PARAMS.get("cliente") : PARAMS.get("cliente") || ULTIMO?.cliente || null;
 // app?cliente=<id>&equipe: acesso extra da equipe, com usuário e senha próprios
 // (o cofre de cada um é dados/<cliente>.<usuario>.enc.json, gravado pelo cofre.py)
-const EQUIPE = PARAMS.get("cliente") ? PARAMS.has("equipe") : !!ULTIMO?.equipe;
-if (PARAMS.get("cliente")) {
+const EQUIPE = GESTOR ? false : PARAMS.get("cliente") ? PARAMS.has("equipe") : !!ULTIMO?.equipe;
+if (PARAMS.get("cliente") && !GESTOR) {
   try { localStorage.setItem("me-ultimo", JSON.stringify({ cliente: CLIENTE, equipe: EQUIPE })); } catch { /* sem armazenamento */ }
 }
 
@@ -465,7 +491,7 @@ if (PARAMS.get("cliente")) {
 // cliente (PBKDF2-SHA256 + AES-256-GCM, igual ao cofre.py). A chave derivada
 // fica lembrada no aparelho; a senha em si nunca é guardada.
 const bytes = (b64) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-const LS = EQUIPE ? `me-equipe-${CLIENTE}` : `me-chave-${CLIENTE}`;
+const LS = GESTOR ? "me-gestor" : EQUIPE ? `me-equipe-${CLIENTE}` : `me-chave-${CLIENTE}`;
 const lsLer = () => { try { return JSON.parse(localStorage.getItem(LS)); } catch { return null; } };
 const lsGravar = (v) => { try { v ? localStorage.setItem(LS, JSON.stringify(v)) : localStorage.removeItem(LS); } catch { /* sem armazenamento */ } };
 
@@ -494,6 +520,10 @@ function pedirSenha(cofre) {
     form.usuario.hidden = false; form.usuario.required = true;
     tela.querySelector("p").textContent = "Acesso da equipe: digite seu usuário e sua senha.";
   }
+  if (GESTOR) {
+    tela.querySelector("h1").textContent = "Área do gestor";
+    tela.querySelector("p").textContent = "Digite a sua senha de gestor.";
+  }
   (EQUIPE ? form.usuario : form.senha).focus();
   return new Promise((resolver) => form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -515,11 +545,80 @@ function pedirSenha(cofre) {
   }));
 }
 
-function sair() { lsGravar(null); location.reload(); }
+function sair() {
+  if (GESTOR) { try { Object.keys(localStorage).filter((k) => k.startsWith("me-gestor")).forEach((k) => localStorage.removeItem(k)); } catch { /* */ } }
+  lsGravar(null); if (GESTOR) location.href = "./?gestor"; else location.reload();
+}
+
+// ---------------------------------------------------------------- área do gestor
+// dados/gestor.enc.json (gravado com "python cofre.py gestor") guarda a lista de
+// clientes e a senha de cada um, cifrados com a senha de gestor. Assim o Vitor
+// abre o app de qualquer cliente sem digitar a senha dele.
+async function abrirGestor() {
+  const cofre = await buscarCofre("gestor");
+  if (!cofre) throw new Error("sem cofre do gestor");
+  const salva = lsLer();
+  let conteudo = null;
+  if (salva?.sal === cofre.sal) conteudo = await decifrar(cofre, bytes(salva.chave)).catch(() => null);
+  return conteudo ?? pedirSenha(cofre);
+}
+async function abrirComoGestor(cofre) {
+  const item = GESTOR_DADOS.clientes.find((c) => c.id === CLIENTE);
+  if (!item) throw new Error("cliente fora da lista do gestor");
+  const chaveLS = `me-gestor-${CLIENTE}`;
+  const salva = (() => { try { return JSON.parse(localStorage.getItem(chaveLS)); } catch { return null; } })();
+  if (salva?.sal === cofre.sal) {
+    const c = await decifrar(cofre, bytes(salva.chave)).catch(() => null);
+    if (c) return c;
+  }
+  const chave = await derivar(item.senha.trim().toLowerCase(), cofre);
+  const conteudo = await decifrar(cofre, chave);
+  try { localStorage.setItem(chaveLS, JSON.stringify({ sal: cofre.sal, chave: btoa(String.fromCharCode(...chave)) })); } catch { /* */ }
+  return conteudo;
+}
+// Espelho: o gestor vê o app como o cliente, mas nada é enviado nem gravado
+// (WhatsApp, cancelamento, troca de senha e mensagens lidas ficam bloqueados).
+function avisoEspelho() {
+  let t = document.getElementById("aviso-espelho");
+  if (!t) {
+    t = document.createElement("div"); t.id = "aviso-espelho"; t.setAttribute("role", "status");
+    t.style.cssText = "position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:#0b2430;color:#fff;padding:10px 14px;border-radius:10px;font-size:13.5px;z-index:50;max-width:90%;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.25)";
+    document.body.appendChild(t);
+  }
+  t.textContent = "Modo espelho: só visualização. Nada é enviado nem alterado.";
+  t.hidden = false; clearTimeout(t._f); t._f = setTimeout(() => { t.hidden = true; }, 2600);
+}
+if (GESTOR) document.addEventListener("click", (e) => {
+  const a = e.target.closest("a[href]");
+  if (a && /wa\.me|whatsapp/i.test(a.href)) { e.preventDefault(); avisoEspelho(); }
+}, true);
+
+function faixaGestor() {
+  const faixa = document.querySelector(".faixa .tela");
+  if (SELETOR) { faixa.innerHTML = `<img src="marca/logo-vc-96.png" alt=""><span><b>Área do gestor</b> · Studio Vitor Campos</span>`; return; }
+  const nome = NOME_CLIENTE || GESTOR_DADOS?.clientes.find((c) => c.id === CLIENTE)?.nome || CLIENTE;
+  faixa.innerHTML = `<span>👁 Espelho de <b>${esc(nome)}</b> · só visualização</span><a href="./?gestor">Trocar cliente</a>`;
+}
+function telaSeletor() {
+  const lista = GESTOR_DADOS?.clientes || [];
+  return `<section><h2>Clientes</h2>
+    <p class="vazio" style="margin:0 0 8px">Toque num cliente para ver o app exatamente como ele vê.</p>
+    <div class="cartao">${lista.map((c) => `<a class="cliente-item" href="./?gestor&cliente=${encodeURIComponent(c.id)}">
+      <div class="avatar" aria-hidden="true">${/^data:image\//.test(c.logo || "") ? `<img src="${c.logo}" alt="">` : esc((c.nome || c.id)[0].toUpperCase())}</div>
+      <div><b>${esc(c.nome || c.id)}</b><span class="sub">${esc(c.id)}</span></div></a>`).join("") || `<p class="vazio">Nenhum cliente no cofre do gestor.</p>`}
+      <a class="cliente-item" href="./?gestor&cliente=">
+      <div class="avatar" aria-hidden="true">?</div>
+      <div><b>Protótipo com dados de exemplo</b><span class="sub">o que um cliente novo vê na demonstração</span></div></a>
+    </div></section>`;
+}
 
 // Dados reais: app?cliente=studio lê o cofre dados/studio.enc.json (gravado pelo
 // robô diário). No computador do Vitor, sem cofre, lê dados/studio.json direto.
 async function carregarReais() {
+  if (GESTOR) {
+    try { GESTOR_DADOS = await abrirGestor(); } catch { GESTOR_DADOS = { clientes: [] }; }
+    if (PARAMS.get("cliente") === null) { SELETOR = true; document.body.classList.add("seletor"); return; }
+  }
   if (!CLIENTE) return;
   try {
     let dados;
@@ -527,12 +626,14 @@ async function carregarReais() {
     const cofre = await buscarCofre(EQUIPE && salva?.usuario ? `${CLIENTE}.${salva.usuario}` : CLIENTE);
     if (cofre) {
       let conteudo = null;
-      if (salva?.sal === cofre.sal) conteudo = await decifrar(cofre, bytes(salva.chave)).catch(() => null);
+      if (GESTOR) conteudo = await abrirComoGestor(cofre);
+      else if (salva?.sal === cofre.sal) conteudo = await decifrar(cofre, bytes(salva.chave)).catch(() => null);
       conteudo ??= await pedirSenha(cofre);
       dados = conteudo.historico;
       NOTAS_REAIS = conteudo.notas;
       ASSINATURA_REAL = conteudo.assinatura || null;
       NOME_CLIENTE = conteudo.nome || "";
+      LOGO_CLIENTE = /^data:image\//.test(conteudo.logo || "") ? conteudo.logo : "";
     } else {
       const r2 = await fetch(`dados/${encodeURIComponent(CLIENTE)}.json`, { cache: "no-cache" });
       if (!r2.ok) return;
@@ -610,7 +711,8 @@ function desenharTopo() {
   if (IMPLANTACAO) {
     const titulo = NOME_CLIENTE || CLIENTE.charAt(0).toUpperCase() + CLIENTE.slice(1);
     document.querySelector(".topo h1").textContent = titulo;
-    document.querySelector(".avatar").textContent = titulo[0].toUpperCase();
+    const av0 = document.querySelector(".avatar");
+    if (LOGO_CLIENTE) av0.innerHTML = `<img src="${LOGO_CLIENTE}" alt="">`; else av0.textContent = titulo[0].toUpperCase();
     return;
   }
   const ig = HISTORICO.at(-1).instagram, fb = HISTORICO.at(-1).facebook;
@@ -618,7 +720,8 @@ function desenharTopo() {
   const titulo = rede === "instagram" ? `@${ig.perfil}` : fonte.nome || (ig && `@${ig.perfil}`);
   document.querySelector(".topo h1").textContent = titulo;
   const av = document.querySelector(".avatar");
-  av.innerHTML = fonte.foto ? `<img src="${esc(fonte.foto)}" alt="">` : esc(titulo.replace("@", "")[0].toUpperCase());
+  const foto = LOGO_CLIENTE || fonte.foto;
+  av.innerHTML = foto ? `<img src="${esc(foto)}" alt="">` : esc(titulo.replace("@", "")[0].toUpperCase());
   document.querySelector(".redes").hidden = REDES.length < 2;
 }
 
@@ -943,6 +1046,7 @@ function telaCancelar() {
       <button class="botao-app secundario" onclick="irAba('resumo')">Voltar ao início</button></div></section>`;
 }
 function enviarCancelamento() {
+  if (GESTOR) return avisoEspelho();
   const a = assinatura(), c = calculoCancelamento(a);
   const perfil = document.querySelector(".topo h1").textContent;
   const texto = [
@@ -968,10 +1072,11 @@ function enviarCancelamento() {
 // em cada mensagem (ou em "Marcar todas como lidas"). O que foi lido fica guardado
 // neste aparelho. No app instalado, o número também aparece no ícone (quando o
 // aparelho permite).
-const LIDOS_LS = `me-lidos-${CLIENTE || "exemplo"}${EQUIPE ? "-equipe" : ""}`;
+const LIDOS_LS = `me-lidos-${CLIENTE || "exemplo"}${EQUIPE ? "-equipe" : ""}${GESTOR ? "-gestor" : ""}`;
 const LIDOS = new Set((() => { try { return JSON.parse(localStorage.getItem(LIDOS_LS)) || []; } catch { return []; } })());
-const gravarLidos = () => { try { localStorage.setItem(LIDOS_LS, JSON.stringify([...LIDOS])); } catch { /* sem armazenamento */ } };
+const gravarLidos = () => { if (GESTOR) return; try { localStorage.setItem(LIDOS_LS, JSON.stringify([...LIDOS])); } catch { /* sem armazenamento */ } };
 let MSGS = [];
+let MSG_ABERTA = null; // mensagem expandida (as outras ficam recolhidas em uma linha)
 function mensagens() {
   const tag = (lista, tipo) => (lista || []).map((n) => ({ ...n, tipo }));
   const todas = EXEMPLO ? tag(NOTAS, "feito") : [...tag(NOTAS_REAIS?.avisos, "aviso"), ...tag(NOTAS_REAIS?.feitos, "feito")];
@@ -983,23 +1088,24 @@ function atualizarSino() {
   const n = naoLidas(), c = document.querySelector(".sino .contador");
   c.hidden = !n; c.textContent = n > 99 ? "99+" : n;
   document.querySelector(".sino").setAttribute("aria-label", n ? `Mensagens: ${n} nova${n > 1 ? "s" : ""}` : "Mensagens");
-  try { n ? navigator.setAppBadge?.(n) : navigator.clearAppBadge?.(); } catch { /* sem suporte */ }
+  if (!GESTOR) try { n ? navigator.setAppBadge?.(n) : navigator.clearAppBadge?.(); } catch { /* sem suporte */ }
 }
-function lerMsg(i) { LIDOS.add(MSGS[i].id); gravarLidos(); desenhar(); }
+function lerMsg(i) { MSG_ABERTA = MSG_ABERTA === MSGS[i].id ? null : MSGS[i].id; LIDOS.add(MSGS[i].id); gravarLidos(); desenhar(); }
 function lerTodas() { MSGS.forEach((m) => LIDOS.add(m.id)); gravarLidos(); desenhar(); }
 function telaAvisos() {
   MSGS = mensagens();
   const n = MSGS.filter((m) => !LIDOS.has(m.id)).length;
   const lista = MSGS.length ? `<div class="cartao">${MSGS.map((m, i) => {
     const nova = !LIDOS.has(m.id);
-    return `<button class="msg${nova ? " nova" : ""}" onclick="lerMsg(${i})">
+    const aberta = MSG_ABERTA === m.id;
+    return `<button class="msg${nova ? " nova" : ""}${aberta ? " aberta" : ""}" aria-expanded="${aberta}" onclick="lerMsg(${i})">
       <span class="ic" aria-hidden="true">${m.tipo === "aviso" ? "💬" : "✓"}</span>
-      <span style="flex:1"><span class="quando">${esc(m.quando)}${m.tipo === "aviso" ? " · aviso do Vitor" : " · feito"}</span><p>${esc(m.texto)}</p></span>
+      <span style="flex:1"><span class="quando">${esc(m.quando)}${m.tipo === "aviso" ? " · aviso do Vitor" : " · feito"}</span><p>${esc(m.texto)}</p><span class="abrir">${aberta ? "Recolher" : "Toque para ler"}</span></span>
       ${nova ? `<span class="ponto" aria-label="não lida"></span>` : ""}</button>`; }).join("")}</div>`
     : `<div class="cartao vazio">As mensagens do Studio aparecem aqui.</div>`;
   return `<button class="voltar-app" onclick="irAba('resumo')">← Voltar</button>
     <section><h2>Mensagens${n ? ` (${n} nova${n > 1 ? "s" : ""})` : ""}</h2>
-      <p class="vazio" style="margin:0 0 8px">Tudo o que fizemos por você e os avisos do Vitor. Toque numa mensagem para marcar como lida.</p>
+      <p class="vazio" style="margin:0 0 8px">Tudo o que fizemos por você e os avisos do Vitor. Toque numa mensagem para ler inteira.</p>
       ${lista}
       ${n > 1 ? `<button class="link-discreto" onclick="lerTodas()">Marcar todas como lidas</button>` : ""}</section>`;
 }
@@ -1038,6 +1144,7 @@ function pedirTrocaSenha() {
   enviarSenha();
 }
 function enviarSenha() {
+  if (GESTOR) return avisoEspelho();
   const perfil = document.querySelector(".topo h1").textContent;
   const texto = `Olá, Vitor! Quero mudar a senha do app do Marketing Essencial.\n\nCliente: ${perfil} (${CLIENTE})\nSenha nova: ${senhaNova}`;
   const janela = window.open(`https://wa.me/${WHATS_STUDIO}?text=${encodeURIComponent(texto)}`, "_blank");
@@ -1060,6 +1167,16 @@ function telaImplantacao() {
 }
 
 function desenhar() {
+  if (GESTOR) faixaGestor();
+  if (SELETOR) {
+    document.querySelector(".topo h1").textContent = "Área do gestor";
+    document.querySelector(".avatar").textContent = "VC";
+    document.getElementById("atualizado").textContent = `${GESTOR_DADOS?.clientes.length || 0} clientes`;
+    document.getElementById("conteudo").innerHTML = telaSeletor() +
+      `<div class="rodape"><img src="marca/logo-vc-96.png" alt="">Marketing Essencial · Studio Vitor Campos</div>` +
+      `<button class="sair" onclick="sair()">Sair deste aparelho</button>`;
+    return;
+  }
   desenharTopo();
   const EXTRAS = { config: telaConfig, cancelar: telaCancelar, avisos: telaAvisos, senha: telaSenha };
   const naConfig = aba in EXTRAS;
@@ -1069,7 +1186,7 @@ function desenhar() {
   if (naConfig) document.querySelector(".redes").hidden = true;
   document.getElementById("conteudo").innerHTML = tela() +
     `<div class="rodape"><img src="marca/logo-vc-96.png" alt="">Marketing Essencial · Studio Vitor Campos</div>` +
-    (NOTAS_REAIS ? `<button class="sair" onclick="sair()">Sair deste aparelho</button>` : "");
+    (NOTAS_REAIS && !GESTOR ? `<button class="sair" onclick="sair()">Sair deste aparelho</button>` : "");
   ligarGrafico();
   atualizarSino();
 }
