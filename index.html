@@ -204,7 +204,19 @@ nav button[aria-current="page"] { color: var(--marca); }
 .rodape { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: var(--texto-3); margin: 22px 0 8px; }
 .rodape img { width: 20px; height: 20px; border-radius: 50%; }
 /* configurações e assinatura (discreto: engrenagem no topo) */
-.engrenagem { margin-left: auto; border: 0; background: none; color: inherit; opacity: .6; padding: 6px; cursor: pointer; }
+.sino { margin-left: auto; position: relative; border: 0; background: none; color: inherit; padding: 6px; cursor: pointer; }
+.sino svg { width: 22px; height: 22px; display: block; }
+.sino .contador { position: absolute; top: 0; right: -2px; min-width: 18px; height: 18px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: #e02424; color: #fff; font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; box-shadow: 0 0 0 2px var(--fundo, #fff); }
+.msg { display: flex; gap: 10px; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--linha); background: none; color: inherit; font: inherit; padding: 12px 0; cursor: pointer; }
+.msg:last-child { border-bottom: 0; }
+.msg .ic { width: 30px; height: 30px; border-radius: 50%; background: var(--marca-suave); color: var(--marca); display: grid; place-items: center; flex: none; font-size: 14px; }
+.msg p { margin: 2px 0 0; font-size: 14px; line-height: 1.45; }
+.msg .quando { font-size: 12px; color: var(--texto-3); }
+.msg.nova p { font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.msg.nova .quando::after { content: " · nova"; color: #e02424; font-weight: 700; }
+.msg .ponto { width: 9px; height: 9px; border-radius: 50%; background: #e02424; flex: none; margin-top: 10px; }
+.campo-senha { width: 100%; box-sizing: border-box; border: 1px solid var(--linha); border-radius: 10px; padding: 12px; font: inherit; font-size: 16px; background: var(--fundo); color: var(--texto); margin-top: 8px; }
+.engrenagem { margin-left: 0; border: 0; background: none; color: inherit; opacity: .6; padding: 6px; cursor: pointer; }
 .engrenagem svg { width: 20px; height: 20px; display: block; }
 .voltar-app { border: 0; background: none; color: var(--marca); font: inherit; font-size: 14px; font-weight: 600; padding: 0; margin-bottom: 12px; cursor: pointer; }
 .dados-ass { margin: 0; }
@@ -324,6 +336,10 @@ nav button[aria-current="page"] { color: var(--marca); }
         <h1>Moranguinho Confeitaria</h1>
         <div class="sub" id="atualizado"></div>
       </div>
+      <button class="sino" type="button" aria-label="Mensagens" onclick="irAba('avisos')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+        <span class="contador" hidden></span>
+      </button>
       <button class="engrenagem" type="button" aria-label="Configurações" onclick="irAba('config')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       </button>
@@ -761,8 +777,8 @@ function resumoTexto() {
 }
 
 // Anotações do gestor: do exemplo ou do cofre (gravadas com notas.py)
-const feitos = () => (EXEMPLO ? NOTAS : (NOTAS_REAIS?.feitos || []).map((n) => ({
-  quando: fmtData(new Date(`${n.data}T12:00:00`)), texto: n.texto })));
+const quandoNota = (n) => n.quando || (n.data ? fmtData(new Date(`${n.data}T12:00:00`)) : "");
+const feitos = () => (EXEMPLO ? NOTAS : (NOTAS_REAIS?.feitos || []).map((n) => ({ quando: quandoNota(n), texto: n.texto })));
 const passos = () => (EXEMPLO ? PASSOS : NOTAS_REAIS?.passos || []);
 const notas = () => feitos().length ? `<div class="cartao">${feitos().slice(0, 8).map((n) => `
   <div class="nota" style="margin-bottom:10px"><div class="ic" aria-hidden="true">✓</div>
@@ -855,7 +871,7 @@ function cancPasso(n) { cancEtapa = n; window.scrollTo(0, 0); desenhar(); }
 function telaConfig() {
   const a = assinatura();
   const voltar = `<button class="voltar-app" onclick="irAba('resumo')">← Voltar</button>`;
-  if (!a) return `${voltar}<section><h2>Minha assinatura</h2><div class="cartao vazio">Os dados da sua assinatura aparecem aqui depois da contratação.</div></section>`;
+  if (!a) return `${voltar}<section><h2>Minha assinatura</h2><div class="cartao vazio">Os dados da sua assinatura aparecem aqui depois da contratação.</div></section>${blocoSenha()}`;
   const s = situacao(a);
   return `${voltar}
     <section><h2>Minha assinatura</h2>
@@ -875,6 +891,7 @@ function telaConfig() {
         <a class="botao-app secundario" href="${LINK_CONTRATO}" target="_blank" rel="noopener">Ver o contrato</a>
       </div>
     </section>
+    ${blocoSenha()}
     <button class="link-discreto" onclick="irAba('cancelar')">Cancelar assinatura</button>`;
 }
 
@@ -945,8 +962,91 @@ function enviarCancelamento() {
   if (cancEtapa !== 3) cancPasso(3);
 }
 
+// ---------------------------------------------------------------- mensagens (sino)
+// Cada anotação do gestor ("O que fizemos", gravada com notas.py fiz) e cada aviso
+// (notas.py aviso) vira uma mensagem. O número no sino acumula até a pessoa tocar
+// em cada mensagem (ou em "Marcar todas como lidas"). O que foi lido fica guardado
+// neste aparelho. No app instalado, o número também aparece no ícone (quando o
+// aparelho permite).
+const LIDOS_LS = `me-lidos-${CLIENTE || "exemplo"}${EQUIPE ? "-equipe" : ""}`;
+const LIDOS = new Set((() => { try { return JSON.parse(localStorage.getItem(LIDOS_LS)) || []; } catch { return []; } })());
+const gravarLidos = () => { try { localStorage.setItem(LIDOS_LS, JSON.stringify([...LIDOS])); } catch { /* sem armazenamento */ } };
+let MSGS = [];
+function mensagens() {
+  const tag = (lista, tipo) => (lista || []).map((n) => ({ ...n, tipo }));
+  const todas = EXEMPLO ? tag(NOTAS, "feito") : [...tag(NOTAS_REAIS?.avisos, "aviso"), ...tag(NOTAS_REAIS?.feitos, "feito")];
+  return todas.map((n) => ({ id: `${n.tipo}|${n.data || n.quando}|${n.texto}`, ordem: n.data || "", quando: quandoNota(n), texto: n.texto, tipo: n.tipo }))
+    .sort((a, b) => b.ordem.localeCompare(a.ordem));
+}
+const naoLidas = () => mensagens().filter((m) => !LIDOS.has(m.id)).length;
+function atualizarSino() {
+  const n = naoLidas(), c = document.querySelector(".sino .contador");
+  c.hidden = !n; c.textContent = n > 99 ? "99+" : n;
+  document.querySelector(".sino").setAttribute("aria-label", n ? `Mensagens: ${n} nova${n > 1 ? "s" : ""}` : "Mensagens");
+  try { n ? navigator.setAppBadge?.(n) : navigator.clearAppBadge?.(); } catch { /* sem suporte */ }
+}
+function lerMsg(i) { LIDOS.add(MSGS[i].id); gravarLidos(); desenhar(); }
+function lerTodas() { MSGS.forEach((m) => LIDOS.add(m.id)); gravarLidos(); desenhar(); }
+function telaAvisos() {
+  MSGS = mensagens();
+  const n = MSGS.filter((m) => !LIDOS.has(m.id)).length;
+  const lista = MSGS.length ? `<div class="cartao">${MSGS.map((m, i) => {
+    const nova = !LIDOS.has(m.id);
+    return `<button class="msg${nova ? " nova" : ""}" onclick="lerMsg(${i})">
+      <span class="ic" aria-hidden="true">${m.tipo === "aviso" ? "💬" : "✓"}</span>
+      <span style="flex:1"><span class="quando">${esc(m.quando)}${m.tipo === "aviso" ? " · aviso do Vitor" : " · feito"}</span><p>${esc(m.texto)}</p></span>
+      ${nova ? `<span class="ponto" aria-label="não lida"></span>` : ""}</button>`; }).join("")}</div>`
+    : `<div class="cartao vazio">As mensagens do Studio aparecem aqui.</div>`;
+  return `<button class="voltar-app" onclick="irAba('resumo')">← Voltar</button>
+    <section><h2>Mensagens${n ? ` (${n} nova${n > 1 ? "s" : ""})` : ""}</h2>
+      <p class="vazio" style="margin:0 0 8px">Tudo o que fizemos por você e os avisos do Vitor. Toque numa mensagem para marcar como lida.</p>
+      ${lista}
+      ${n > 1 ? `<button class="link-discreto" onclick="lerTodas()">Marcar todas como lidas</button>` : ""}</section>`;
+}
+
+// ---------------------------------------------------------------- troca de senha
+// Etapa 1 (sem servidor): a pessoa escolhe a senha nova e o pedido vai para o
+// WhatsApp do Vitor, que aplica com "python cofre.py trocar-senha <cliente> <nova>".
+// Etapa 2 (servidor Cloudflare): a troca passa a ser feita na hora, pelo próprio app.
+let senhaEtapa = 1, senhaNova = "";
+function blocoSenha() {
+  if (!NOTAS_REAIS || EQUIPE) return "";
+  return `<section><h2>Senha do app</h2><div class="cartao"><p>Quer trocar a senha que você usa para entrar no app?</p>
+    <button class="botao-app secundario" onclick="senhaEtapa=1;irAba('senha')">Mudar minha senha</button></div></section>`;
+}
+function telaSenha() {
+  const voltar = `<button class="voltar-app" onclick="irAba('config')">← Voltar</button>`;
+  if (senhaEtapa === 2) return `${voltar}<section><h2>Falta só um passo</h2><div class="cartao">
+      <p>Abrimos o WhatsApp com o seu pedido já escrito. <b>Toque em enviar</b> para concluir.</p>
+      <p>Assim que o Vitor confirmar, a senha nova passa a valer. Na próxima vez que abrir o app, ele pede a senha nova uma vez e depois lembra.</p>
+      <button class="botao-app secundario" onclick="enviarSenha()">Abrir o WhatsApp de novo</button>
+      <button class="botao-app secundario" onclick="irAba('resumo')">Voltar ao início</button></div></section>`;
+  return `${voltar}<section><h2>Mudar minha senha</h2><div class="cartao">
+      <p>Escolha uma senha fácil de lembrar, com pelo menos 6 letras ou números. Maiúsculas e minúsculas não fazem diferença.</p>
+      <input class="campo-senha" id="senha1" type="password" autocomplete="new-password" placeholder="Senha nova">
+      <input class="campo-senha" id="senha2" type="password" autocomplete="new-password" placeholder="Repita a senha nova">
+      <label style="display:flex;gap:8px;align-items:center;font-size:14px;margin-top:10px"><input type="checkbox" onchange="document.querySelectorAll('.campo-senha').forEach((c)=>c.type=this.checked?'text':'password')"> Mostrar a senha</label>
+      <div id="erro-senha" role="alert" style="color:#c92a2a;font-size:14px;margin-top:8px"></div>
+      <button class="botao-app primario" onclick="pedirTrocaSenha()">Pedir a troca</button></div></section>`;
+}
+function pedirTrocaSenha() {
+  const a = document.getElementById("senha1").value.trim(), b = document.getElementById("senha2").value.trim();
+  const erro = document.getElementById("erro-senha");
+  if (a.length < 6) { erro.textContent = "A senha precisa ter pelo menos 6 letras ou números."; return; }
+  if (a.toLowerCase() !== b.toLowerCase()) { erro.textContent = "As duas senhas não estão iguais. Confira e tente de novo."; return; }
+  senhaNova = a.toLowerCase();
+  enviarSenha();
+}
+function enviarSenha() {
+  const perfil = document.querySelector(".topo h1").textContent;
+  const texto = `Olá, Vitor! Quero mudar a senha do app do Marketing Essencial.\n\nCliente: ${perfil} (${CLIENTE})\nSenha nova: ${senhaNova}`;
+  const janela = window.open(`https://wa.me/${WHATS_STUDIO}?text=${encodeURIComponent(texto)}`, "_blank");
+  if (janela) janela.opener = null;
+  if (senhaEtapa !== 2) { senhaEtapa = 2; window.scrollTo(0, 0); desenhar(); }
+}
+
 function telaImplantacao() {
-  const feitos = (NOTAS_REAIS?.feitos || []).map((n) => `<li><b>${n.quando || ""}</b> ${n.texto}</li>`).join("");
+  const feitos = (NOTAS_REAIS?.feitos || []).map((n) => `<li><b>${esc(quandoNota(n))}</b> ${esc(n.texto)}</li>`).join("");
   return `<section class="cartao"><h2>Bem-vindo ao Marketing Essencial 🎉</h2>
     <p>Sua contratação está confirmada e a implantação começou. Assim que ligarmos o seu Instagram e o seu Facebook,
     os seus números aparecem aqui todos os dias: seguidores, alcance, visitas ao perfil, mensagens e os melhores posts.</p>
@@ -961,8 +1061,9 @@ function telaImplantacao() {
 
 function desenhar() {
   desenharTopo();
-  const naConfig = aba === "config" || aba === "cancelar";
-  const tela = aba === "config" ? telaConfig : aba === "cancelar" ? telaCancelar : IMPLANTACAO ? telaImplantacao : TELAS[aba];
+  const EXTRAS = { config: telaConfig, cancelar: telaCancelar, avisos: telaAvisos, senha: telaSenha };
+  const naConfig = aba in EXTRAS;
+  const tela = EXTRAS[aba] || (IMPLANTACAO ? telaImplantacao : TELAS[aba]);
   if (IMPLANTACAO && !naConfig) document.querySelector(".redes").hidden = true;
   document.querySelector(".periodos").hidden = naConfig || IMPLANTACAO;
   if (naConfig) document.querySelector(".redes").hidden = true;
@@ -970,6 +1071,7 @@ function desenhar() {
     `<div class="rodape"><img src="marca/logo-vc-96.png" alt="">Marketing Essencial · Studio Vitor Campos</div>` +
     (NOTAS_REAIS ? `<button class="sair" onclick="sair()">Sair deste aparelho</button>` : "");
   ligarGrafico();
+  atualizarSino();
 }
 
 document.getElementById("atualizado").textContent =

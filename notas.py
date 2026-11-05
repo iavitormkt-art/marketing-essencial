@@ -6,7 +6,12 @@
 #   python notas.py <cliente> fiz "texto" --data 2026-10-20
 #   python notas.py <cliente> passos "Calendário de novembro" "Responder em até 2 h"   (substitui a lista)
 #   python notas.py <cliente> apagar-fiz <número>   (número mostrado no listar)
+#   python notas.py <cliente> aviso "Seu calendário de dezembro está pronto para aprovar"   (mensagem no sino)
+#   python notas.py <cliente> apagar-aviso <número>
 #   python notas.py <cliente> listar
+#
+# Cada "fiz" e cada "aviso" aparece como mensagem nova no sino do app, com o número
+# acumulando até o cliente tocar para ler.
 
 import sys
 from datetime import datetime
@@ -27,6 +32,12 @@ def main():
         texto = args[0]
         notas["feitos"].insert(0, {"data": data, "texto": texto})
         notas["feitos"].sort(key=lambda n: n["data"], reverse=True)
+    elif acao == "aviso":
+        data = args[args.index("--data") + 1] if "--data" in args else datetime.now(FUSO).date().isoformat()
+        notas.setdefault("avisos", []).insert(0, {"data": data, "texto": args[0]})
+        notas["avisos"].sort(key=lambda n: n["data"], reverse=True)
+    elif acao == "apagar-aviso":
+        notas.setdefault("avisos", []).pop(int(args[0]) - 1)
     elif acao == "passos":
         notas["passos"] = list(args)
     elif acao == "apagar-fiz":
@@ -34,7 +45,9 @@ def main():
     if acao != "listar":
         cofre.fechar(cliente, conteudo)
     for i, n in enumerate(notas["feitos"], 1):
-        print(f"{i}. {n['data']}  {n['texto']}")
+        print(f"{i}. {n.get('data') or n.get('quando')}  {n['texto']}")
+    for i, n in enumerate(notas.get("avisos", []), 1):
+        print(f"aviso {i}. {n['data']}  {n['texto']}")
     for p in notas["passos"]:
         print(f"   -> {p}")
 

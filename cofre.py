@@ -11,6 +11,7 @@
 #   python cofre.py fechar <cliente>   dados/<cliente>.json (+ notas) -> dados/<cliente>.enc.json
 #   python cofre.py abrir <cliente>    dados/<cliente>.enc.json -> dados/<cliente>.json (para o coletor)
 #   python cofre.py senha <cliente>    cria a senha do cliente no .env (SENHA_<CLIENTE>), se não existir
+#   python cofre.py trocar-senha <cliente> <nova>   troca a senha (pedido do app pelo WhatsApp) e refaz o cofre
 #
 # A senha vem de SENHA_<CLIENTE> (no .env local ou nos segredos do GitHub). Nunca é impressa.
 #
@@ -124,14 +125,39 @@ def criar_senha(cliente):
     print(f"{nome} criada no .env")
 
 
+def trocar_senha(cliente, nova):
+    """Abre o cofre com a senha atual, grava a nova no .env e fecha o cofre com ela."""
+    nova = nova.strip().lower()
+    if len(nova) < 6:
+        sys.exit("A senha precisa ter pelo menos 6 letras ou números")
+    conteudo = abrir(cliente)
+    nome = f"SENHA_{cliente.upper()}"
+    arquivo = PASTA / ".env"
+    linhas = arquivo.read_text(encoding="utf-8").splitlines()
+    achou = False
+    for i, linha in enumerate(linhas):
+        if linha.split("=", 1)[0].strip() == nome:
+            linhas[i] = f"{nome}={nova}"
+            achou = True
+    if not achou:
+        linhas += [f"# Senha do app do cliente {cliente}", f"{nome}={nova}"]
+    arquivo.write_text("\n".join(linhas) + "\n", encoding="utf-8")
+    ENV[nome] = nova
+    fechar(cliente, conteudo)
+    print(f"{nome} trocada e cofre refeito. Falta publicar (commit + push).")
+    print(f"Se o cliente estiver no robô diário, atualize também o segredo {nome} no GitHub.")
+
+
 def main():
-    if len(sys.argv) < 3 or sys.argv[1] not in ("fechar", "abrir", "senha"):
+    if len(sys.argv) < 3 or sys.argv[1] not in ("fechar", "abrir", "senha", "trocar-senha"):
         print(__doc__)
         sys.exit(1)
     acao, cliente = sys.argv[1], sys.argv[2]
     historico, notas, _ = arquivos(cliente)
     if acao == "senha":
         criar_senha(cliente)
+    elif acao == "trocar-senha":
+        trocar_senha(cliente, sys.argv[3])
     elif acao == "abrir":
         conteudo = abrir(cliente)
         historico.parent.mkdir(exist_ok=True)
