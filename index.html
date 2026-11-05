@@ -431,6 +431,8 @@ let REDES = ["instagram"];
 
 let NOTAS_REAIS = null;
 let ASSINATURA_REAL = null;
+let NOME_CLIENTE = ""; // nome de exibição gravado no cofre ("nome"), usado antes de haver dados
+let IMPLANTACAO = false; // cliente com cofre, mas o Instagram/Facebook ainda não foi ligado
 const PARAMS = new URLSearchParams(location.search);
 // Sem ?cliente= na abertura (ex.: app instalado), volta ao último cliente aberto
 const ULTIMO = (() => { try { return JSON.parse(localStorage.getItem("me-ultimo")); } catch { return null; } })();
@@ -514,13 +516,19 @@ async function carregarReais() {
       dados = conteudo.historico;
       NOTAS_REAIS = conteudo.notas;
       ASSINATURA_REAL = conteudo.assinatura || null;
+      NOME_CLIENTE = conteudo.nome || "";
     } else {
       const r2 = await fetch(`dados/${encodeURIComponent(CLIENTE)}.json`, { cache: "no-cache" });
       if (!r2.ok) return;
       dados = await r2.json();
     }
     dados = dados.filter((d) => d.instagram || d.facebook);
-    if (!dados.length) return;
+    if (!dados.length) {
+      // cliente novo: ainda sem números. Nada de dados de exemplo: mostra a tela de implantação
+      if (cofre) { IMPLANTACAO = true; EXEMPLO = false; document.querySelector(".exemplo").hidden = true;
+        document.getElementById("atualizado").textContent = "Em implantação"; }
+      return;
+    }
     HISTORICO = dados.map((d) => ({ ...d, data: new Date(`${d.data}T12:00:00`) }));
     EXEMPLO = false;
     const ultimo = dados.at(-1);
@@ -583,6 +591,12 @@ const partes = (f) => (rede === "ambos" && REDES.length > 1
 // ---------------------------------------------------------------- topo
 function desenharTopo() {
   if (EXEMPLO) return;
+  if (IMPLANTACAO) {
+    const titulo = NOME_CLIENTE || CLIENTE.charAt(0).toUpperCase() + CLIENTE.slice(1);
+    document.querySelector(".topo h1").textContent = titulo;
+    document.querySelector(".avatar").textContent = titulo[0].toUpperCase();
+    return;
+  }
   const ig = HISTORICO.at(-1).instagram, fb = HISTORICO.at(-1).facebook;
   const fonte = rede === "facebook" ? fb : ig || fb;
   const titulo = rede === "instagram" ? `@${ig.perfil}` : fonte.nome || (ig && `@${ig.perfil}`);
@@ -931,11 +945,26 @@ function enviarCancelamento() {
   if (cancEtapa !== 3) cancPasso(3);
 }
 
+function telaImplantacao() {
+  const feitos = (NOTAS_REAIS?.feitos || []).map((n) => `<li><b>${n.quando || ""}</b> ${n.texto}</li>`).join("");
+  return `<section class="cartao"><h2>Bem-vindo ao Marketing Essencial 🎉</h2>
+    <p>Sua contratação está confirmada e a implantação começou. Assim que ligarmos o seu Instagram e o seu Facebook,
+    os seus números aparecem aqui todos os dias: seguidores, alcance, visitas ao perfil, mensagens e os melhores posts.</p>
+    <p><b>O que acontece agora:</b></p>
+    <ol><li>Liberação do acesso à página e ao Instagram no Meta Business Suite.</li>
+    <li>Diagnóstico com os números de hoje: o "mês zero" para medir o crescimento.</li>
+    <li>Respostas automáticas e perguntas frequentes configuradas.</li>
+    <li>Modelos de post com a cara da sua marca e o calendário do mês.</li></ol>
+    ${feitos ? `<p><b>Já feito:</b></p><ul>${feitos}</ul>` : ""}
+    <p>Dúvidas? <a href="https://wa.me/${WHATS_STUDIO}" target="_blank" rel="noopener">Fale com o Vitor no WhatsApp</a>.</p></section>`;
+}
+
 function desenhar() {
   desenharTopo();
-  const tela = aba === "config" ? telaConfig : aba === "cancelar" ? telaCancelar : TELAS[aba];
   const naConfig = aba === "config" || aba === "cancelar";
-  document.querySelector(".periodos").hidden = naConfig;
+  const tela = aba === "config" ? telaConfig : aba === "cancelar" ? telaCancelar : IMPLANTACAO ? telaImplantacao : TELAS[aba];
+  if (IMPLANTACAO && !naConfig) document.querySelector(".redes").hidden = true;
+  document.querySelector(".periodos").hidden = naConfig || IMPLANTACAO;
   if (naConfig) document.querySelector(".redes").hidden = true;
   document.getElementById("conteudo").innerHTML = tela() +
     `<div class="rodape"><img src="marca/logo-vc-96.png" alt="">Marketing Essencial · Studio Vitor Campos</div>` +
