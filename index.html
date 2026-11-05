@@ -28,6 +28,9 @@
 <script>
 if (new URLSearchParams(location.search).has("gestor")) {
   document.querySelector('meta[name="apple-mobile-web-app-title"]').content = "ME Gestor";
+  // ícone com as cores invertidas, para não confundir com o app do cliente
+  document.querySelector('link[rel="apple-touch-icon"]').href = "icone-gestor-180.png";
+  document.querySelector('link[rel="icon"]').href = "favicon-gestor-32.png";
 }
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
