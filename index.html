@@ -890,6 +890,14 @@ const notas = () => feitos().length ? `<div class="cartao">${feitos().slice(0, 8
   <div class="nota" style="margin-bottom:10px"><div class="ic" aria-hidden="true">✓</div>
   <div><div class="quando">${esc(n.quando)}</div><p>${esc(n.texto)}</p></div></div>`).join("")}</div>`
   : `<div class="cartao vazio">As anotações do gestor entram aqui.</div>`;
+// Tela inicial: só o que foi feito HOJE (o histórico completo fica no sino)
+const hojeISO = () => new Date().toLocaleDateString("sv-SE"); // AAAA-MM-DD no fuso do aparelho
+const feitosHoje = () => (EXEMPLO ? NOTAS.filter((n) => n.quando === fmtData(HOJE))
+  : (NOTAS_REAIS?.feitos || []).filter((n) => n.data === hojeISO()).map((n) => ({ quando: quandoNota(n), texto: n.texto })));
+const notasHoje = () => feitosHoje().length ? `<div class="cartao">${feitosHoje().map((n) => `
+  <div class="nota" style="margin-bottom:10px"><div class="ic" aria-hidden="true">✓</div>
+  <div><p>${esc(n.texto)}</p></div></div>`).join("")}</div>`
+  : `<div class="cartao vazio">Nada registrado hoje ainda. <a href="#" onclick="irAba('avisos');return false">Ver todas as mensagens</a></div>`;
 const listaPassos = () => passos().length
   ? `<div class="cartao"><ul class="passos">${passos().map((p) => `<li>${esc(p)}</li>`).join("")}</ul></div>`
   : `<div class="cartao vazio">Os próximos passos entram aqui.</div>`;
@@ -901,7 +909,7 @@ const TELAS = {
     <section><h2>Números</h2>${cartoesNumeros()}</section>
     <section><h2>Alcance</h2>${grafico()}</section>
     <section><h2>${periodo === "dia" ? "Postado hoje" : "Melhores posts"}</h2>${listaPosts(3)}</section>
-    <section><h2>O que fizemos</h2>${notas()}</section>`,
+    <section><h2>O que fizemos hoje</h2>${notasHoje()}</section>`,
   posts: () => `<section><h2>${periodo === "dia" ? "Postado hoje" : "Posts do período (mais alcance primeiro)"}</h2>${listaPosts(40)}</section>`,
   conversas: () => `<section><h2>Comentários e perguntas</h2>${listaComentarios()}</section>`,
   relatorio: () => `
@@ -1156,8 +1164,8 @@ function enviarSenha() {
 }
 
 function telaImplantacao() {
-  const feitos = (NOTAS_REAIS?.feitos || []).map((n) => `<li><b>${esc(quandoNota(n))}</b> ${esc(n.texto)}</li>`).join("");
-  return `<section class="cartao"><h2>Bem-vindo ao Marketing Essencial 🎉</h2>
+  return `<section><h2>O que fizemos hoje</h2>${notasHoje()}</section>
+    <section class="cartao"><h2>Bem-vindo ao Marketing Essencial 🎉</h2>
     <p>Sua contratação está confirmada e a implantação começou. Assim que ligarmos o seu Instagram e o seu Facebook,
     os seus números aparecem aqui todos os dias: seguidores, alcance, visitas ao perfil, mensagens e os melhores posts.</p>
     <p><b>O que acontece agora:</b></p>
@@ -1165,7 +1173,6 @@ function telaImplantacao() {
     <li>Diagnóstico com os números de hoje: o "mês zero" para medir o crescimento.</li>
     <li>Respostas automáticas e perguntas frequentes configuradas.</li>
     <li>Modelos de post com a cara da sua marca e o calendário do mês.</li></ol>
-    ${feitos ? `<p><b>Já feito:</b></p><ul>${feitos}</ul>` : ""}
     <p>Dúvidas? <a href="https://wa.me/${WHATS_STUDIO}" target="_blank" rel="noopener">Fale com o Vitor no WhatsApp</a>.</p></section>`;
 }
 
