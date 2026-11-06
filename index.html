@@ -26,6 +26,18 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="M. Essencial">
 <script>
+// Marca própria do cliente no ícone e no nome do app instalado (ícones gerados
+// a partir da logo; cliente sem entrada aqui usa o ícone do Studio)
+var MARCAS = { moranguinho: "Moranguinho" };
+(function () {
+  var p = new URLSearchParams(location.search), c = p.get("cliente");
+  if (!c) { try { c = (JSON.parse(localStorage.getItem("me-ultimo")) || {}).cliente; } catch (e) { c = null; } }
+  if (p.has("gestor") || !c || !MARCAS[c]) return;
+  document.querySelector('meta[name="apple-mobile-web-app-title"]').content = MARCAS[c];
+  document.querySelector('link[rel="apple-touch-icon"]').href = "icone-" + c + "-180.png";
+  document.querySelector('link[rel="icon"]').href = "favicon-" + c + "-32.png";
+  document.title = MARCAS[c];
+})();
 if (new URLSearchParams(location.search).has("gestor")) {
   document.querySelector('meta[name="apple-mobile-web-app-title"]').content = "ME Gestor";
   // ícone com as cores invertidas, para não confundir com o app do cliente
@@ -1217,7 +1229,40 @@ document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click
   window.scrollTo(0, 0);
   desenhar();
 }));
-carregarReais().then(() => {
+// App instalado que abre sem cliente (no iPhone o ícone pode ter sido adicionado
+// sem ?cliente= e o armazenamento do app começa vazio): em vez da demonstração,
+// pede a senha e descobre o cliente pelo cofre que ela abre.
+const CLIENTES_APP = ["moranguinho", "studio"];
+const ABRIU_INSTALADO = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+function descobrirCliente() {
+  document.querySelector(".exemplo").hidden = true;
+  const tela = document.getElementById("entrada");
+  tela.hidden = false;
+  const form = tela.querySelector("form"), erro = tela.querySelector(".erro"), botao = form.querySelector("button");
+  form.senha.focus();
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    erro.textContent = ""; botao.disabled = true; botao.textContent = "Abrindo…";
+    const senha = form.senha.value.trim().toLowerCase();
+    for (const id of CLIENTES_APP) {
+      try {
+        const cofre = await buscarCofre(id);
+        if (!cofre) continue;
+        const chave = await derivar(senha, cofre);
+        await decifrar(cofre, chave);
+        localStorage.setItem("me-ultimo", JSON.stringify({ cliente: id, equipe: false }));
+        if (form.lembrar.checked) localStorage.setItem(`me-chave-${id}`,
+          JSON.stringify({ usuario: "", sal: cofre.sal, chave: btoa(String.fromCharCode(...chave)) }));
+        location.replace(`./?cliente=${encodeURIComponent(id)}`);
+        return;
+      } catch { /* senha não é deste cliente */ }
+    }
+    erro.textContent = "Senha incorreta. Confira e tente de novo.";
+    botao.disabled = false; botao.textContent = "Entrar";
+  });
+}
+if (!CLIENTE && !GESTOR && ABRIU_INSTALADO) descobrirCliente();
+else carregarReais().then(() => {
   if (REDES.length === 1) rede = REDES[0];
   desenhar();
 });
