@@ -408,9 +408,49 @@ body.seletor .engrenagem, body.seletor .exemplo { display: none !important; }
 #instalar .nao { background: transparent; color: #a9c4cc; border: 1px solid #12404f !important; }
 #instalar .seta { text-align: center; color: var(--ciano); font-size: 22px; margin-top: 6px; animation: pula 1.2s infinite; }
 @keyframes pula { 50% { transform: translateY(5px); } }
+
+/* Abertura: o VC se desenha em linha, gira e o nome aparece (1x por sessão) */
+#abertura { position: fixed; inset: 0; z-index: 100; background: #003346; display: grid; place-items: center; align-content: center; gap: 0;
+  animation: ab-sai .45s ease-in 1.75s forwards; }
+#abertura svg { width: 104px; height: 104px; overflow: visible; animation: ab-gira 1.1s cubic-bezier(.2,.8,.2,1) both; }
+#abertura svg * { fill: none; stroke: #00fff9; stroke-width: 3; stroke-linecap: round; stroke-linejoin: miter; stroke-dasharray: 1; stroke-dashoffset: 1; }
+#abertura .c1 { animation: ab-traca .75s cubic-bezier(.6,0,.2,1) .05s forwards; }
+#abertura .v  { animation: ab-traca .55s cubic-bezier(.6,0,.2,1) .45s forwards; }
+#abertura .c2 { animation: ab-traca .6s cubic-bezier(.6,0,.2,1) .7s forwards; }
+#abertura .nome { white-space: nowrap; margin-top: 22px; color: #fff; font: 300 19px/1 Inter, system-ui, sans-serif; letter-spacing: .5em; text-transform: uppercase;
+  opacity: 0; animation: ab-nome .7s cubic-bezier(.2,.8,.2,1) 1s forwards; padding-left: .5em; }
+#abertura .nome b { font-weight: 700; color: #00fff9; }
+#abertura .assina { margin-top: 12px; color: rgba(255,255,255,.55); font: 500 11px/1 Inter, system-ui, sans-serif; letter-spacing: .32em; text-transform: uppercase;
+  opacity: 0; animation: ab-in .6s ease 1.25s forwards; padding-left: .32em; }
+@keyframes ab-traca { to { stroke-dashoffset: 0; } }
+@keyframes ab-gira { from { transform: rotate(-120deg) scale(.86); } to { transform: none; } }
+@keyframes ab-nome { from { opacity: 0; letter-spacing: .45em; } to { opacity: 1; letter-spacing: .2em; } }
+@keyframes ab-in { to { opacity: 1; } }
+@keyframes ab-sai { to { opacity: 0; transform: scale(1.04); visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) {
+  #abertura, #abertura * { animation-duration: .01s !important; animation-delay: 0s !important; }
+  #abertura { animation: ab-sai .3s ease .8s forwards !important; }
+}
 </style>
 </head>
 <body>
+<div id="abertura" aria-hidden="true">
+  <svg viewBox="0 0 100 100"><defs><clipPath id="ab-clip"><circle cx="50" cy="51" r="44"/></clipPath></defs>
+    <circle class="c1" cx="50" cy="51" r="44" pathLength="1" transform="rotate(-90 50 51)"/>
+    <g clip-path="url(#ab-clip)"><path class="v" d="M8.22 29.12 L31.73 87.06 L75.21 7.93" pathLength="1"/>
+    <circle class="c2" cx="71.53" cy="54.09" r="29" pathLength="1" transform="rotate(-150 71.53 54.09)"/></g></svg>
+  <div class="nome">Marketing <b>Essencial</b></div>
+  <div class="assina">Studio Vitor Campos</div>
+</div>
+<script>
+(function () {
+  // só na 1ª abertura da sessão; dentro do app (trocar de aba, abrir conversa) não repete
+  var a = document.getElementById("abertura");
+  try { if (sessionStorage.getItem("me-abertura")) { a.remove(); return; } sessionStorage.setItem("me-abertura", "1"); } catch (e) {}
+  setTimeout(function () { a.remove(); }, 2400);
+  a.addEventListener("click", function () { a.remove(); });
+})();
+</script>
 <div id="instalar" hidden role="dialog" aria-labelledby="instalar-titulo">
   <div class="cab">
     <img src="icone-192.png" alt="">
