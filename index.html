@@ -528,8 +528,8 @@ html.gestor #porta .barra { background: #fff; }
       <p><b id="porta-pct">0%</b> · Instalando… não feche esta tela</p>
     </div>
     <ol id="porta-ios" hidden>
-      <li><span>Toque em <b>Compartilhar</b></span><svg viewBox="0 0 24 24" aria-label="ícone Compartilhar"><path d="M12 3v12M8 7l4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg></li>
-      <li><span>Escolha <b>Adicionar à Tela de Início</b></span></li>
+      <li><span>Toque em <b>•••</b> (embaixo, à direita) e em <b>Compartilhar</b></span><svg viewBox="0 0 24 24" aria-label="ícone Compartilhar"><path d="M12 3v12M8 7l4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg></li>
+      <li><span>Role a lista e escolha <b>Adicionar à Tela de Início</b></span></li>
       <li><span>Toque em <b>Adicionar</b> e abra pelo ícone novo</span></li>
     </ol>
     <ol id="porta-android" hidden>
@@ -560,7 +560,7 @@ html.gestor #porta .barra { background: #fff; }
   document.documentElement.style.overflow = "hidden";
   var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   var bt = document.getElementById("porta-instalar");
-  if (ios) { document.getElementById("porta-ios").hidden = false; return; }
+  if (ios) { document.getElementById("porta-ios").hidden = false; document.getElementById("porta-obs").innerHTML = "Use o <b>Safari</b>. Se abriu pelo WhatsApp, toque no ícone do Safari ou em <b>•••</b> › <b>Abrir no Safari</b>."; return; }
   // Android/computador: botão usa o pedido nativo; se o navegador não oferecer, mostra o passo a passo do menu
   // O botão "Instalar app" aparece sempre. Se o navegador já liberou a instalação, abre o pedido nativo;
   // se não (ex.: aberto dentro de outro app), mostra o caminho pelo menu.
