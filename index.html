@@ -282,6 +282,17 @@ nav button .contador-nav { position: absolute; top: 0; right: 8px; min-width: 17
 .chat-aviso button { margin-left: auto; flex: none; border: 0; border-radius: 10px; background: var(--marca); color: var(--sobre-marca); font: inherit; font-weight: 700; font-size: 13px; padding: 8px 10px; cursor: pointer; }
 .cliente-item .naolidas { margin-left: auto; min-width: 22px; height: 22px; border-radius: 11px; background: #e02424; color: #fff; font-size: 12px; font-weight: 800; line-height: 22px; text-align: center; padding: 0 6px; }
 .cliente-item .ultima { display: block; font-size: 12.5px; color: var(--texto-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+/* galeria: o cliente marca as fotos que NÃO quer que usemos */
+.galeria { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.galeria button { position: relative; padding: 0; border: 0; background: #ddd; aspect-ratio: 1; cursor: pointer; overflow: hidden; border-radius: 6px; }
+.galeria img { width: 100%; height: 100%; object-fit: cover; display: block; transition: opacity .2s, filter .2s; }
+.galeria .n { position: absolute; left: 4px; top: 4px; background: rgba(0,0,0,.55); color: #fff; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 8px; }
+.galeria .x { position: absolute; inset: 0; display: none; place-items: center; background: rgba(224,36,36,.35); color: #fff; font-size: 40px; font-weight: 800; }
+.galeria button.fora img { opacity: .45; filter: grayscale(1); }
+.galeria button.fora .x { display: grid; }
+.galeria-barra { position: sticky; bottom: calc(66px + env(safe-area-inset-bottom)); margin-top: 14px; background: var(--cartao); border-radius: 14px; box-shadow: var(--sombra); padding: 12px 14px; display: flex; gap: 10px; align-items: center; }
+.galeria-barra span { flex: 1; font-size: 13.5px; color: var(--texto-2); }
+.botao-galeria { display: inline-block; margin-top: 6px; border: 0; border-radius: 10px; padding: 9px 14px; font: inherit; font-weight: 700; background: var(--marca); color: var(--sobre-marca); cursor: pointer; }
 .foto-grande { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.92); display: grid; place-items: center; }
 .foto-grande img { max-width: 100%; max-height: 100%; }
 /* barra só com ícones, colunas iguais (o nome fica no aria-label) */
@@ -1451,6 +1462,48 @@ function atualizarSino() {
 }
 function lerMsg(i) { MSG_ABERTA = MSG_ABERTA === MSGS[i].id ? null : MSGS[i].id; LIDOS.add(MSGS[i].id); gravarLidos(); desenhar(); }
 function lerTodas() { MSGS.forEach((m) => LIDOS.add(m.id)); gravarLidos(); desenhar(); }
+// ---------------------------------------------------------------- galeria de fotos para aprovar
+// galeria/<cliente>.json + galeria/<cliente>/<n>.jpg (resolução de tela). O cliente toca nas fotos
+// que NÃO quer que usemos e envia a escolha pela Conversa. Abre pelo botão "[galeria]" numa mensagem.
+let GALERIA = null, GAL_FORA = new Set(), GAL_ENVIADA = false;
+async function carregarGaleria() {
+  if (GALERIA) return;
+  const r = await fetch(`galeria/${encodeURIComponent(CLIENTE)}.json`, { cache: "no-cache" }).catch(() => null);
+  GALERIA = r?.ok ? await r.json() : { itens: [] };
+  try { GAL_FORA = new Set(JSON.parse(localStorage.getItem(`me-galeria-${CLIENTE}`)) || []); } catch { /* */ }
+  if (aba === "galeria") desenhar();
+}
+function marcarFoto(n) {
+  if (GAL_FORA.has(n)) GAL_FORA.delete(n); else GAL_FORA.add(n);
+  try { localStorage.setItem(`me-galeria-${CLIENTE}`, JSON.stringify([...GAL_FORA])); } catch { /* */ }
+  GAL_ENVIADA = false; desenhar();
+}
+function verFoto(n) {
+  const f = document.createElement("div"); f.className = "foto-grande";
+  f.innerHTML = `<img src="galeria/${encodeURIComponent(CLIENTE)}/${String(n).padStart(3, "0")}.jpg" alt="Foto ${n}">`;
+  f.onclick = () => f.remove(); document.body.appendChild(f);
+}
+function enviarGaleria() {
+  if (GESTOR) return avisoEspelho();
+  const fora = [...GAL_FORA].sort((a, b) => a - b);
+  const texto = fora.length
+    ? `Galeria de fotos: NÃO usar as fotos ${fora.join(", ")}. As outras ${GALERIA.itens.length - fora.length} podem ser usadas.`
+    : `Galeria de fotos: todas as ${GALERIA.itens.length} fotos podem ser usadas.`;
+  enviarPedido(texto); GAL_ENVIADA = true; desenhar();
+}
+function telaGaleria() {
+  if (!GALERIA) { carregarGaleria(); return `<section><div class="cartao vazio">Carregando as fotos…</div></section>`; }
+  if (!GALERIA.itens.length) return `<section><div class="cartao vazio">Nenhuma galeria para revisar agora.</div></section>`;
+  const grupos = [...new Set(GALERIA.itens.map((i) => i.grupo))];
+  return `<button class="voltar-app" onclick="irAba('chat')">← Voltar</button>
+    <section><h2>${esc(GALERIA.titulo || "Fotos")}</h2><div class="cartao"><p>Toque nas fotos que você <b>não quer</b> que a gente use (ficam com um ✕). As outras estão liberadas. Para ver grande, segure a foto.</p></div></section>
+    ${grupos.map((g) => `<section><h2>${esc(g)}</h2><div class="galeria">${GALERIA.itens.filter((i) => i.grupo === g).map((i) => `
+      <button class="${GAL_FORA.has(i.n) ? "fora" : ""}" onclick="marcarFoto(${i.n})" oncontextmenu="event.preventDefault();verFoto(${i.n})" aria-label="Foto ${i.n}${GAL_FORA.has(i.n) ? ", não usar" : ""}">
+        <img loading="lazy" src="galeria/${encodeURIComponent(CLIENTE)}/${String(i.n).padStart(3, "0")}.jpg" alt=""><span class="n">${i.n}</span><span class="x">✕</span></button>`).join("")}</div></section>`).join("")}
+    <div class="galeria-barra"><span>${GAL_ENVIADA ? "Enviado pela Conversa ✓" : `${GAL_FORA.size} marcada${GAL_FORA.size === 1 ? "" : "s"} para não usar`}</span>
+      <button class="botao-galeria" onclick="enviarGaleria()">${GAL_ENVIADA ? "Enviar de novo" : "Enviar escolha"}</button></div>`;
+}
+
 function telaAvisos() {
   MSGS = mensagens();
   const n = MSGS.filter((m) => !LIDOS.has(m.id)).length;
@@ -1624,7 +1677,8 @@ function bolha(m) {
   else if (m.tipo === "audio") corpo = `<audio data-midia="${m.id}" controls preload="none"></audio>`;
   else if (m.tipo === "video") corpo = `<video data-midia="${m.id}" controls playsinline preload="metadata"></video>`;
   else if (m.tipo === "arquivo") corpo = `<a class="anexo" data-midia="${m.id}" data-nome="${esc(m.nome || "arquivo")}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg><span>${esc(m.nome || "Arquivo")}</span></a>`;
-  const texto = m.texto ? esc(m.texto).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>') : "";
+  const texto = m.texto ? esc(m.texto).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')
+    .replace(/\[galeria\]/gi, `<button class="botao-galeria" onclick="irAba('galeria')">Abrir a galeria de fotos</button>`) : "";
   const outro = EU() === "studio" ? "cliente" : "studio";
   const visto = minha && !m.enviando && (CHAT_LIDOS[outro] || 0) >= m.id ? " · lida" : "";
   return `<div class="bolha ${minha ? "minha" : "dele"}${m.enviando ? " enviando" : ""}" data-id="${m.id}">${corpo}${texto}<span class="hora">${m.enviando ? "enviando…" : hhmm(m.em) + visto}</span></div>`;
@@ -1867,7 +1921,7 @@ function desenhar() {
     return;
   }
   desenharTopo();
-  const EXTRAS = { config: telaConfig, cancelar: telaCancelar, avisos: telaAvisos, senha: telaSenha };
+  const EXTRAS = { config: telaConfig, cancelar: telaCancelar, avisos: telaAvisos, senha: telaSenha, galeria: telaGaleria };
   const naConfig = aba in EXTRAS;
   if (aba === "chat" && !CHAT_CFG) aba = "resumo";
   const naChat = aba === "chat";
