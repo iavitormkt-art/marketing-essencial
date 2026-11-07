@@ -43,6 +43,9 @@ if (new URLSearchParams(location.search).has("gestor")) {
   // ícone com as cores invertidas, para não confundir com o app do cliente
   document.querySelector('link[rel="apple-touch-icon"]').href = "icone-gestor-180.png";
   document.querySelector('link[rel="icon"]').href = "favicon-gestor-32.png";
+  // app do gestor em preto e branco, para não confundir com o app do cliente
+  document.querySelector('meta[name="theme-color"]').content = "#000000";
+  document.documentElement.classList.add("gestor");
 }
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -423,6 +426,9 @@ body.seletor .engrenagem, body.seletor .exemplo { display: none !important; }
 #abertura .nome b { font-weight: 700; color: #00fff9; }
 #abertura .assina { margin-top: 16px; color: rgba(255,255,255,.55); font: 500 10.5px/1 Inter, system-ui, sans-serif; letter-spacing: .26em; text-transform: uppercase;
   opacity: 0; animation: ab-in .6s ease 1.25s forwards; padding-left: .32em; }
+html.gestor #abertura { background: #000; }
+html.gestor #abertura svg * { stroke: #fff; }
+html.gestor #abertura .nome b { color: #fff; }
 @keyframes ab-traca { to { stroke-dashoffset: 0; } }
 @keyframes ab-gira { from { transform: rotate(-120deg) scale(.86); } to { transform: none; } }
 @keyframes ab-nome { from { opacity: 0; letter-spacing: .45em; } to { opacity: 1; letter-spacing: .3em; } }

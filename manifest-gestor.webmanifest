@@ -4,8 +4,8 @@
   "description": "Acompanhamento diário do Instagram e do Facebook · Studio Vitor Campos",
   "start_url": "./?gestor",
   "display": "standalone",
-  "background_color": "#003346",
-  "theme_color": "#003346",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "lang": "pt-BR",
   "icons": [
     {
