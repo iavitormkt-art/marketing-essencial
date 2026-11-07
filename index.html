@@ -293,6 +293,21 @@ nav button.destaque[aria-current="page"]::after { display: none; }
 nav button.destaque[aria-current="page"] .bolinha { box-shadow: 0 0 0 3px var(--marca-suave); }
 nav button.destaque .contador-nav { top: 0; right: calc(50% - 30px); box-shadow: 0 0 0 2px var(--cartao); }
 /* configurações e assinatura (discreto: engrenagem no topo) */
+/* gestor: lista de conversas (estilo WhatsApp) e conversa aberta em tela cheia */
+.abas-gestor { display: flex; gap: 6px; background: var(--cartao); padding: 4px; border-radius: 12px; box-shadow: var(--sombra); margin-top: 4px; }
+.abas-gestor a { flex: 1; text-align: center; text-decoration: none; color: var(--texto-2); font-weight: 600; padding: 8px 0; border-radius: 9px; }
+.abas-gestor a[aria-current="true"] { background: var(--marca); color: var(--sobre-marca); }
+.abas-gestor .n { display: inline-block; min-width: 18px; height: 18px; line-height: 18px; border-radius: 9px; background: #e02424; color: #fff; font-size: 11px; font-weight: 800; margin-left: 4px; padding: 0 5px; }
+.conversa-item .meio { flex: 1; min-width: 0; }
+.conversa-item .ultima { max-width: none; }
+.conversa-item .lado { margin-left: auto; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }
+.conversa-item .hora { font-size: 11.5px; color: var(--texto-3); }
+.conversa-item.tem-nova .hora { color: #e02424; font-weight: 700; }
+.conversa-item .naolidas { margin-left: 0; }
+body.conversa nav, body.conversa .periodos, body.conversa .redes, body.conversa .sino,
+body.conversa .engrenagem, body.conversa .exemplo { display: none !important; }
+.voltar-topo { font-size: 34px; line-height: 1; text-decoration: none; color: var(--texto); padding: 0 4px 4px 0; flex: none; }
+.faixa a.voltar { margin-left: 0; margin-right: 6px; font-size: 14px; }
 body.seletor nav, body.seletor .periodos, body.seletor .redes, body.seletor .sino,
 body.seletor .engrenagem, body.seletor .exemplo { display: none !important; }
 .faixa a { color: var(--ciano); font-weight: 700; margin-left: auto; text-decoration: none; }
@@ -560,6 +575,9 @@ const ULTIMO = (() => { try { return JSON.parse(localStorage.getItem("me-ultimo"
 // app?gestor&cliente=<id>: o app do cliente, exatamente como ele vê.
 const GESTOR = PARAMS.has("gestor");
 let GESTOR_DADOS = null; // {clientes: [{id, nome, senha}]}, do cofre dados/gestor.enc.json
+const CONVERSA = PARAMS.has("gestor") && PARAMS.has("conversa"); // conversa aberta a partir da lista
+const VER_GESTOR = PARAMS.get("ver") === "clientes" ? "clientes" : "conversas";
+if (CONVERSA) document.body.classList.add("conversa");
 let SELETOR = false;     // área do gestor sem cliente escolhido: lista de clientes
 const CLIENTE = GESTOR ? PARAMS.get("cliente") : PARAMS.get("cliente") || ULTIMO?.cliente || null;
 // app?cliente=<id>&equipe: acesso extra da equipe, com usuário e senha próprios
@@ -680,11 +698,40 @@ function faixaGestor() {
   const faixa = document.querySelector(".faixa .tela");
   if (SELETOR) { faixa.innerHTML = `<img src="marca/logo-vc-96.png" alt=""><span><b>Área do gestor</b> · Studio Vitor Campos</span>`; return; }
   const nome = NOME_CLIENTE || GESTOR_DADOS?.clientes.find((c) => c.id === CLIENTE)?.nome || CLIENTE;
+  if (CONVERSA) { faixa.innerHTML = `<a class="voltar" href="./?gestor">‹ Conversas</a><span>Você responde como <b>Studio</b></span><a href="./?gestor&cliente=${encodeURIComponent(CLIENTE)}">Ver o app dele</a>`; return; }
   faixa.innerHTML = `<span>👁 Espelho de <b>${esc(nome)}</b> · na Conversa você responde como Studio</span><a href="./?gestor">Trocar cliente</a>`;
+}
+const previaMsg = (u) => !u ? "" : `${u.de === "studio" ? "Você: " : ""}${u.tipo === "foto" ? "📷 Foto" : u.tipo === "audio" ? "🎤 Áudio" : u.tipo === "video" ? "🎬 Vídeo" : u.tipo === "arquivo" ? "📎 Arquivo" : u.texto}`;
+function horaCurta(iso) {
+  if (!iso) return "";
+  const d = new Date(iso), hoje = new Date(), ontem = new Date(); ontem.setDate(hoje.getDate() - 1);
+  if (d.toDateString() === hoje.toDateString()) return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  if (d.toDateString() === ontem.toDateString()) return "ontem";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+}
+const avatarCliente = (c) => `<div class="avatar" aria-hidden="true">${/^data:image\//.test(c.logo || "") ? `<img src="${c.logo}" alt="">` : esc((c.nome || c.id)[0].toUpperCase())}</div>`;
+function abasGestor() {
+  const novas = (CHAT_RESUMO || []).reduce((s, r) => s + (r.naoLidas || 0), 0);
+  return `<div class="abas-gestor" role="tablist">
+    <a href="./?gestor" aria-current="${VER_GESTOR === "conversas"}">Conversas${novas ? `<span class="n">${novas}</span>` : ""}</a>
+    <a href="./?gestor&ver=clientes" aria-current="${VER_GESTOR === "clientes"}">Clientes</a></div>`;
+}
+// Cada cliente com Conversa ligada é um contato; a mais recente fica em cima.
+function telaConversas() {
+  const clientes = GESTOR_DADOS?.clientes || [];
+  const itens = (CHAT_RESUMO || []).map((r) => ({ r, c: clientes.find((x) => x.id === r.cliente) || { id: r.cliente, nome: r.cliente } }))
+    .sort((a, b) => (b.r.ultima?.em || "").localeCompare(a.r.ultima?.em || ""));
+  if (!CHAT_CFG) return `<section><div class="cartao vazio">A Conversa ainda não está ligada no seu app de gestor.</div></section>`;
+  return `<section><div class="cartao">${itens.map(({ r, c }) => `
+    <a class="cliente-item conversa-item${r.naoLidas ? " tem-nova" : ""}" href="./?gestor&cliente=${encodeURIComponent(c.id)}&conversa">
+      ${avatarCliente(c)}
+      <div class="meio"><b>${esc(c.nome || c.id)}</b><span class="sub"><span class="ultima">${esc(previaMsg(r.ultima) || "Toque para começar a conversa")}</span></span></div>
+      <div class="lado"><span class="hora">${horaCurta(r.ultima?.em)}</span>${r.naoLidas ? `<span class="naolidas">${r.naoLidas}</span>` : ""}</div></a>`).join("")
+    || `<p class="vazio">Nenhum cliente com a Conversa ligada ainda.</p>`}</div></section>`;
 }
 function telaSeletor() {
   const lista = GESTOR_DADOS?.clientes || [];
-  return `<section><h2>Clientes</h2>
+  return `<section>
     <p class="vazio" style="margin:0 0 8px">Toque num cliente para ver o app exatamente como ele vê.</p>
     <div class="cartao">${lista.map((c) => { const r = (CHAT_RESUMO || []).find((x) => x.cliente === c.id);
       const ult = r?.ultima ? `${r.ultima.de === "studio" ? "Você: " : ""}${r.ultima.tipo === "foto" ? "📷 Foto" : r.ultima.tipo === "audio" ? "🎤 Áudio" : r.ultima.tipo === "video" ? "🎬 Vídeo" : r.ultima.tipo === "arquivo" ? "📎 Arquivo" : r.ultima.texto}` : "";
@@ -703,7 +750,14 @@ async function carregarReais() {
   if (GESTOR) {
     try { GESTOR_DADOS = await abrirGestor(); } catch { GESTOR_DADOS = { clientes: [] }; }
     CHAT_CFG = GESTOR_DADOS.chat || null;
-    if (PARAMS.get("cliente") === null) { SELETOR = true; document.body.classList.add("seletor"); await carregarResumoChat(); return; }
+    if (PARAMS.get("cliente") === null) {
+      SELETOR = true; document.body.classList.add("seletor"); await carregarResumoChat();
+      // lista de conversas sempre atual: confere a cada 10 s (e quando o app volta para a tela)
+      const atualizarLista = async () => { if (document.hidden) return; await carregarResumoChat(); desenhar(); };
+      setInterval(atualizarLista, 10000);
+      document.addEventListener("visibilitychange", atualizarLista);
+      return;
+    }
   }
   if (!CLIENTE) return;
   try {
@@ -758,7 +812,7 @@ const PASSOS = [
 
 // ---------------------------------------------------------------- estado
 let periodo = "dia";
-let aba = new URLSearchParams(location.search).get("aba") === "chat" ? "chat" : "resumo";
+let aba = new URLSearchParams(location.search).get("aba") === "chat" || CONVERSA ? "chat" : "resumo";
 let rede = "ambos";
 
 const NOME_REDE = { instagram: "Instagram", facebook: "Facebook" };
@@ -795,6 +849,8 @@ const partes = (f) => (rede === "ambos" && REDES.length > 1
 
 // ---------------------------------------------------------------- topo
 function desenharTopo() {
+  if (CONVERSA && !document.querySelector(".voltar-topo"))
+    document.querySelector(".topo").insertAdjacentHTML("afterbegin", `<a class="voltar-topo" href="./?gestor" aria-label="Voltar para as conversas">‹</a>`);
   if (EXEMPLO) return;
   if (IMPLANTACAO) {
     const titulo = NOME_CLIENTE || CLIENTE.charAt(0).toUpperCase() + CLIENTE.slice(1);
@@ -1601,7 +1657,8 @@ function desenhar() {
     document.querySelector(".topo h1").textContent = "Área do gestor";
     document.querySelector(".avatar").textContent = "VC";
     document.getElementById("atualizado").textContent = `${GESTOR_DADOS?.clientes.length || 0} clientes`;
-    document.getElementById("conteudo").innerHTML = (CHAT_CFG ? blocoAvisos() : "") + telaSeletor() +
+    document.getElementById("conteudo").innerHTML = abasGestor() + (CHAT_CFG && VER_GESTOR === "conversas" ? blocoAvisos() : "") +
+      (VER_GESTOR === "conversas" ? telaConversas() : telaSeletor()) +
       `<div class="rodape"><img src="marca/logo-vc-96.png" alt="">Marketing Essencial · Studio Vitor Campos</div>` +
       `<button class="sair" onclick="sair()">Sair deste aparelho</button>`;
     return;
