@@ -8,6 +8,7 @@
 #   python notas.py <cliente> apagar-fiz <número>   (número mostrado no listar)
 #   python notas.py <cliente> aviso "Seu calendário de dezembro está pronto para aprovar"   (mensagem no sino)
 #   python notas.py <cliente> apagar-aviso <número>
+#   python notas.py <cliente> marco <arquivo.json>   (relatório "Ponto de partida" do mês zero)
 #   python notas.py <cliente> listar
 #
 # Cada "fiz" e cada "aviso" aparece como mensagem nova no sino do app, com o número
@@ -40,6 +41,9 @@ def main():
         notas.setdefault("avisos", []).pop(int(args[0]) - 1)
     elif acao == "passos":
         notas["passos"] = list(args)
+    elif acao == "marco":
+        import json
+        conteudo["marcoZero"] = json.loads(open(args[0], encoding="utf-8").read())
     elif acao == "apagar-fiz":
         notas["feitos"].pop(int(args[0]) - 1)
     if acao != "listar":

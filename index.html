@@ -149,6 +149,20 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: v
 .numero .delta.sobe { color: var(--ok); }
 .numero .partes { font-size: 12px; color: var(--texto-3); margin-top: 2px; }
 
+/* ponto de partida (mês zero) */
+.marco .periodo { font-size: 12.5px; color: var(--texto-3); margin: -4px 0 10px 4px; }
+.marco .alerta { display: flex; gap: 12px; align-items: center; background: var(--cartao); border-radius: 16px; box-shadow: var(--sombra); padding: 14px 16px; border-left: 4px solid #d9534f; }
+.marco .alerta b { font-size: 34px; font-weight: 800; color: #d9534f; letter-spacing: -.02em; flex: none; }
+.marco .alerta p { margin: 0; font-size: 14px; line-height: 1.45; }
+.marco .numeros { margin-top: 10px; }
+.marco .numero .valor { font-size: 21px; }
+.marco h3 { font-size: 13px; margin: 0 0 6px; color: var(--texto-2); }
+.marco ul { margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.5; }
+.marco li + li { margin-top: 4px; }
+.marco .fonte { font-size: 11.5px; color: var(--texto-3); margin: 8px 0 0 4px; }
+.marco-chamada { display: block; text-decoration: none; color: inherit; }
+.marco-chamada span { color: var(--marca); font-weight: 700; font-size: 13.5px; }
+
 .resumo-dia { font-size: 15px; }
 .resumo-dia b { color: var(--marca); }
 
@@ -704,6 +718,7 @@ async function carregarReais() {
       dados = conteudo.historico;
       NOTAS_REAIS = conteudo.notas;
       ASSINATURA_REAL = conteudo.assinatura || null;
+      MARCO_ZERO = conteudo.marcoZero || null;
       NOME_CLIENTE = conteudo.nome || "";
       LOGO_CLIENTE = /^data:image\//.test(conteudo.logo || "") ? conteudo.logo : "";
       if (!GESTOR) CHAT_CFG = conteudo.chat?.token ? conteudo.chat : null;
@@ -972,9 +987,33 @@ const listaPassos = () => passos().length
   ? `<div class="cartao"><ul class="passos">${passos().map((p) => `<li>${esc(p)}</li>`).join("")}</ul></div>`
   : `<div class="cartao vazio">Os próximos passos entram aqui.</div>`;
 
+// Ponto de partida (mês zero): retrato dos 28 dias antes do serviço, gravado com
+// "notas.py <cliente> marco arquivo.json". Fica no topo do Relatório; no Resumo
+// aparece uma chamada curta até a data "ate".
+let MARCO_ZERO = null;
+const marcoZero = () => {
+  const m = MARCO_ZERO;
+  if (!m) return "";
+  return `<section class="marco"><h2>${esc(m.titulo || "Ponto de partida")}</h2>
+    <div class="periodo">${esc(m.periodo || "")}</div>
+    ${m.destaque ? `<div class="alerta"><b>${esc(m.destaque.numero)}</b><p>${esc(m.destaque.texto)}</p></div>` : ""}
+    <div class="numeros">${(m.numeros || []).map(([r, v, d]) => `<div class="numero"><div class="rotulo">${esc(r)}</div>
+      <div class="valor">${esc(v)}</div><div class="partes">${esc(d || "")}</div></div>`).join("")}</div>
+    ${m.leituras?.length ? `<div class="cartao" style="margin-top:10px"><h3>O que os números mostram</h3><ul>${m.leituras.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+    ${m.metas?.length ? `<div class="cartao"><h3>Metas do primeiro mês</h3><ul>${m.metas.map((x) => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+    ${m.fonte ? `<div class="fonte">${esc(m.fonte)}</div>` : ""}</section>`;
+};
+const chamadaMarco = () => {
+  const m = MARCO_ZERO;
+  if (!m?.destaque || (m.ate && hojeISO() > m.ate)) return "";
+  return `<section><a class="cartao marco-chamada" href="#" onclick="irAba('relatorio');return false">
+    <p><b>${esc(m.destaque.numero)}</b> ${esc(m.destaque.texto.split(". ")[0])}.</p>
+    <span>Ver o ponto de partida →</span></a></section>`;
+};
+
 // ---------------------------------------------------------------- telas
 const TELAS = {
-  resumo: () => `
+  resumo: () => `${chamadaMarco()}
     <section>${resumoTexto()}</section>
     <section><h2>Números</h2>${cartoesNumeros()}</section>
     <section><h2>Alcance</h2>${grafico()}</section>
@@ -982,7 +1021,7 @@ const TELAS = {
     <section><h2>O que fizemos hoje</h2>${notasHoje()}</section>`,
   posts: () => `<section><h2>${periodo === "dia" ? "Postado hoje" : "Posts do período (mais alcance primeiro)"}</h2>${listaPosts(40)}</section>`,
   conversas: () => `<section><h2>Comentários e perguntas</h2>${listaComentarios()}</section>`,
-  relatorio: () => `
+  relatorio: () => `${marcoZero()}
     <section><h2>Relatório ${periodo === "dia" ? "do dia" : periodo === "semana" ? "da semana" : "do mês"}</h2>${resumoTexto()}</section>
     <section>${cartoesNumeros()}</section>
     <section>${grafico()}</section>
