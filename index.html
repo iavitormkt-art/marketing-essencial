@@ -951,6 +951,7 @@ async function carregarReais() {
       conteudo ??= await pedirSenha(cofre);
       dados = conteudo.historico;
       NOTAS_REAIS = conteudo.notas;
+      conferirGaleria();
       ASSINATURA_REAL = conteudo.assinatura || null;
       MARCO_ZERO = conteudo.marcoZero || null;
       NOME_CLIENTE = conteudo.nome || "";
@@ -1257,7 +1258,7 @@ const chamadaMarco = () => {
 
 // ---------------------------------------------------------------- telas
 const TELAS = {
-  resumo: () => `${!GESTOR && CHAT_CFG ? blocoAvisos() : ""}${chamadaMarco()}
+  resumo: () => `${!GESTOR && CHAT_CFG ? blocoAvisos() : ""}${atalhoGaleria()}${chamadaMarco()}
     <section>${resumoTexto()}</section>
     <section><h2>Números</h2>${cartoesNumeros()}</section>
     <section><h2>Alcance</h2>${grafico()}</section>
@@ -1465,7 +1466,17 @@ function lerTodas() { MSGS.forEach((m) => LIDOS.add(m.id)); gravarLidos(); desen
 // ---------------------------------------------------------------- galeria de fotos para aprovar
 // galeria/<cliente>.json + galeria/<cliente>/<n>.jpg (resolução de tela). O cliente toca nas fotos
 // que NÃO quer que usemos e envia a escolha pela Conversa. Abre pelo botão "[galeria]" numa mensagem.
-let GALERIA = null, GAL_FORA = new Set(), GAL_ENVIADA = false;
+let GALERIA = null, GAL_FORA = new Set(), GAL_ENVIADA = false, GAL_EXISTE = false;
+// Existe galeria para este cliente? (mostra o atalho no Resumo até o cliente enviar a escolha)
+function conferirGaleria() {
+  if (!CLIENTE) return;
+  fetch(`galeria/${encodeURIComponent(CLIENTE)}.json`, { method: "HEAD", cache: "no-cache" })
+    .then((r) => { GAL_EXISTE = r.ok; if (r.ok && aba === "resumo") desenhar(); }).catch(() => {});
+}
+const galeriaJaEnviada = () => { try { return localStorage.getItem(`me-galeria-enviada-${CLIENTE}`) === "1"; } catch { return false; } };
+const atalhoGaleria = () => (GAL_EXISTE && (GESTOR || !galeriaJaEnviada())
+  ? `<section><a class="cartao marco-chamada" href="#" onclick="irAba('galeria');return false"><p><b>📷 Fotos para aprovar</b></p>
+     <span>Escolha quais fotos a gente pode usar →</span></a></section>` : "");
 async function carregarGaleria() {
   if (GALERIA) return;
   const r = await fetch(`galeria/${encodeURIComponent(CLIENTE)}.json`, { cache: "no-cache" }).catch(() => null);
@@ -1489,13 +1500,15 @@ function enviarGaleria() {
   const texto = fora.length
     ? `Galeria de fotos: NÃO usar as fotos ${fora.join(", ")}. As outras ${GALERIA.itens.length - fora.length} podem ser usadas.`
     : `Galeria de fotos: todas as ${GALERIA.itens.length} fotos podem ser usadas.`;
-  enviarPedido(texto); GAL_ENVIADA = true; desenhar();
+  enviarPedido(texto); GAL_ENVIADA = true;
+  try { localStorage.setItem(`me-galeria-enviada-${CLIENTE}`, "1"); } catch { /* */ }
+  desenhar();
 }
 function telaGaleria() {
   if (!GALERIA) { carregarGaleria(); return `<section><div class="cartao vazio">Carregando as fotos…</div></section>`; }
   if (!GALERIA.itens.length) return `<section><div class="cartao vazio">Nenhuma galeria para revisar agora.</div></section>`;
   const grupos = [...new Set(GALERIA.itens.map((i) => i.grupo))];
-  return `<button class="voltar-app" onclick="irAba('chat')">← Voltar</button>
+  return `<button class="voltar-app" onclick="irAba('resumo')">← Voltar</button>
     <section><h2>${esc(GALERIA.titulo || "Fotos")}</h2><div class="cartao"><p>Toque nas fotos que você <b>não quer</b> que a gente use (ficam com um ✕). As outras estão liberadas. Para ver grande, segure a foto.</p></div></section>
     ${grupos.map((g) => `<section><h2>${esc(g)}</h2><div class="galeria">${GALERIA.itens.filter((i) => i.grupo === g).map((i) => `
       <button class="${GAL_FORA.has(i.n) ? "fora" : ""}" onclick="marcarFoto(${i.n})" oncontextmenu="event.preventDefault();verFoto(${i.n})" aria-label="Foto ${i.n}${GAL_FORA.has(i.n) ? ", não usar" : ""}">
