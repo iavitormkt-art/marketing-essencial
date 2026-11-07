@@ -1,6 +1,6 @@
 {
-  "name": "ME Gestor · Studio Vitor Campos",
-  "short_name": "ME Gestor",
+  "name": "Studio · Gestor",
+  "short_name": "Studio · Gestor",
   "description": "Acompanhamento diário do Instagram e do Facebook · Studio Vitor Campos",
   "start_url": "./?gestor",
   "display": "standalone",
