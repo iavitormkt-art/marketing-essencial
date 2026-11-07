@@ -1,6 +1,6 @@
 // Guarda as telas do app para abrir rápido (e sem internet, com os últimos dados)
-const CACHE = "me-v15";
-const ARQUIVOS = ["./", "index.html", "manifest.webmanifest", "icone-192.png", "icone-180.png", "marca/logo-vc-96.png", "som-mensagem.m4a", "marca/badge-96.png"];
+const CACHE = "me-v16";
+const ARQUIVOS = ["./", "index.html", "manifest.webmanifest", "icone-192.png", "icone-180.png", "marca/logo-vc-96.png", "som-mensagem.m4a", "marca/badge-linha-96.png"];
 self.addEventListener("install", (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARQUIVOS))));
 self.addEventListener("activate", (e) =>
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k))))),
@@ -29,7 +29,7 @@ self.addEventListener("push", (e) => {
     let icone = "icone-192.png";
     if (d.icone) { try { if ((await fetch(d.icone, { method: "HEAD" })).ok) icone = d.icone; } catch { /* sem rede */ } }
     await self.registration.showNotification(d.titulo || "Marketing Essencial", {
-      body: d.corpo || "Mensagem nova", icon: icone, badge: "marca/badge-96.png",
+      body: d.corpo || "Mensagem nova", icon: icone, badge: "marca/badge-linha-96.png",
       tag: `conversa-${d.cliente || ""}`, renotify: true, vibrate: [90, 60, 90],
       data: { url: new URL(d.url || "./?aba=chat", self.registration.scope).href },
     });
