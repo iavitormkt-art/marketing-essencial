@@ -30,8 +30,11 @@ jobs:
           IG_STUDIO: ${{ secrets.IG_STUDIO }}
           FB_STUDIO: ${{ secrets.FB_STUDIO }}
           SENHA_STUDIO: ${{ secrets.SENHA_STUDIO }}
+          IG_MORANGUINHO: ${{ secrets.IG_MORANGUINHO }}
+          FB_MORANGUINHO: ${{ secrets.FB_MORANGUINHO }}
+          SENHA_MORANGUINHO: ${{ secrets.SENHA_MORANGUINHO }}
         run: |
-          for c in studio; do
+          for c in studio moranguinho; do
             if [ -f "agenda/$c.enc.json" ]; then python agenda.py "$c" publicar; fi
           done
       - name: Gravar o status no repositório

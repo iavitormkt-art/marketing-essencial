@@ -31,8 +31,11 @@ jobs:
           FB_STUDIO: ${{ secrets.FB_STUDIO }}
           SENHA_STUDIO: ${{ secrets.SENHA_STUDIO }}
           ACESSOS_STUDIO: ${{ secrets.ACESSOS_STUDIO }}
+          IG_MORANGUINHO: ${{ secrets.IG_MORANGUINHO }}
+          FB_MORANGUINHO: ${{ secrets.FB_MORANGUINHO }}
+          SENHA_MORANGUINHO: ${{ secrets.SENHA_MORANGUINHO }}
         # Um cliente novo = mais uma linha de segredos acima e o id na lista abaixo
-        run: python robo.py studio
+        run: python robo.py studio moranguinho
       - name: Gravar no repositório
         run: |
           git config user.name "robo-marketing-essencial"
