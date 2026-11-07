@@ -1,5 +1,5 @@
 // Guarda as telas do app para abrir rápido (e sem internet, com os últimos dados)
-const CACHE = "me-v14";
+const CACHE = "me-v15";
 const ARQUIVOS = ["./", "index.html", "manifest.webmanifest", "icone-192.png", "icone-180.png", "marca/logo-vc-96.png", "som-mensagem.m4a", "marca/badge-96.png"];
 self.addEventListener("install", (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARQUIVOS))));
 self.addEventListener("activate", (e) =>
@@ -24,10 +24,16 @@ self.addEventListener("fetch", (e) => {
 self.addEventListener("push", (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch { d = { corpo: e.data?.text() }; }
-  e.waitUntil(self.registration.showNotification(d.titulo || "Marketing Essencial", {
-    body: d.corpo || "Mensagem nova", icon: "icone-192.png", badge: "marca/badge-96.png", tag: "conversa", renotify: true, vibrate: [90, 60, 90],
-    data: { url: new URL(d.url || "./?aba=chat", self.registration.scope).href },
-  }));
+  e.waitUntil((async () => {
+    // logo do cliente quando existir (aviso para o gestor); senão, o VC do Studio
+    let icone = "icone-192.png";
+    if (d.icone) { try { if ((await fetch(d.icone, { method: "HEAD" })).ok) icone = d.icone; } catch { /* sem rede */ } }
+    await self.registration.showNotification(d.titulo || "Marketing Essencial", {
+      body: d.corpo || "Mensagem nova", icon: icone, badge: "marca/badge-96.png",
+      tag: `conversa-${d.cliente || ""}`, renotify: true, vibrate: [90, 60, 90],
+      data: { url: new URL(d.url || "./?aba=chat", self.registration.scope).href },
+    });
+  })());
 });
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
