@@ -429,6 +429,27 @@ body.seletor .engrenagem, body.seletor .exemplo { display: none !important; }
 html.gestor #abertura { background: #000; }
 html.gestor #abertura svg * { stroke: #fff; }
 html.gestor #abertura .nome b { color: #fff; }
+/* Porta: fora do app instalado, a única coisa na tela é o convite para instalar */
+#porta { position: fixed; inset: 0; z-index: 99; background: #003346; color: #fff; display: grid; place-items: center; padding: 28px 24px;
+  text-align: center; font-family: Inter, system-ui, sans-serif; }
+html.gestor #porta { background: #000; }
+#porta .caixa { width: min(100%, 360px); }
+#porta svg { width: 64px; height: 64px; }
+#porta svg * { fill: none; stroke: #00fff9; stroke-width: 3; }
+html.gestor #porta svg * { stroke: #fff; }
+#porta h1 { font-size: 22px; font-weight: 700; margin: 22px 0 8px; letter-spacing: -.01em; }
+#porta p { font-size: 15px; line-height: 1.5; color: rgba(255,255,255,.72); margin: 0; }
+#porta .bt { display: block; width: 100%; margin-top: 26px; border: 0; border-radius: 14px; padding: 15px; font: 700 16px Inter, system-ui, sans-serif;
+  background: #00fff9; color: #003346; cursor: pointer; }
+html.gestor #porta .bt { background: #fff; color: #000; }
+#porta ol { text-align: left; margin: 24px 0 0; padding: 0; list-style: none; counter-reset: p; font-size: 15px; line-height: 1.45; }
+#porta li { counter-increment: p; display: flex; gap: 12px; align-items: center; padding: 9px 0; border-top: 1px solid rgba(255,255,255,.1); }
+#porta li::before { content: counter(p); flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  background: rgba(255,255,255,.12); font-weight: 700; font-size: 13px; }
+#porta li svg { width: 20px; height: 20px; flex: none; }
+#porta li svg * { stroke-width: 2; }
+#porta .obs { margin-top: 18px; font-size: 13px; color: rgba(255,255,255,.5); }
+#porta [hidden] { display: none !important; }
 @keyframes ab-traca { to { stroke-dashoffset: 0; } }
 @keyframes ab-gira { from { transform: rotate(-120deg) scale(.86); } to { transform: none; } }
 @keyframes ab-nome { from { opacity: 0; letter-spacing: .45em; } to { opacity: 1; letter-spacing: .3em; } }
@@ -456,6 +477,60 @@ html.gestor #abertura .nome b { color: #fff; }
   try { if (sessionStorage.getItem("me-abertura")) { a.remove(); return; } sessionStorage.setItem("me-abertura", "1"); } catch (e) {}
   setTimeout(function () { a.remove(); }, 2400);
   a.addEventListener("click", function () { a.remove(); });
+})();
+</script>
+<div id="porta" hidden>
+  <div class="caixa">
+    <svg viewBox="0 0 100 100" aria-hidden="true"><defs><clipPath id="pt-clip"><circle cx="50" cy="51" r="44"/></clipPath></defs>
+      <circle cx="50" cy="51" r="44"/><g clip-path="url(#pt-clip)"><path d="M8.22 29.12 L31.73 87.06 L75.21 7.93"/><circle cx="71.53" cy="54.09" r="29"/></g></svg>
+    <h1 id="porta-titulo">Instale o app</h1>
+    <p id="porta-texto">O acompanhamento funciona como um app no seu celular. Instale para entrar.</p>
+    <button class="bt" type="button" id="porta-instalar" hidden>Instalar app</button>
+    <ol id="porta-ios" hidden>
+      <li><span>Toque em <b>Compartilhar</b></span><svg viewBox="0 0 24 24" aria-label="ícone Compartilhar"><path d="M12 3v12M8 7l4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg></li>
+      <li><span>Escolha <b>Adicionar à Tela de Início</b></span></li>
+      <li><span>Toque em <b>Adicionar</b> e abra pelo ícone novo</span></li>
+    </ol>
+    <ol id="porta-android" hidden>
+      <li><span>Toque no menu <b>⋮</b> do navegador</span></li>
+      <li><span>Escolha <b>Instalar app</b> (ou <b>Adicionar à tela inicial</b>)</span></li>
+      <li><span>Abra pelo ícone novo na tela do celular</span></li>
+    </ol>
+    <p class="obs" id="porta-obs">Abriu pelo WhatsApp ou Instagram? Toque em ⋮ e escolha <b>Abrir no navegador</b>.</p>
+  </div>
+</div>
+<script>
+// Fora do app instalado (navegador), nada do app aparece: só a porta para instalar.
+// Exceção para testes do Studio: ?navegador=1 libera este aparelho (desfaz com ?navegador=0).
+(function () {
+  var q = new URLSearchParams(location.search);
+  try { if (q.get("navegador") === "1") localStorage.setItem("me-navegador", "1"); if (q.get("navegador") === "0") localStorage.removeItem("me-navegador"); } catch (e) {}
+  var instalado = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  var liberado = false; try { liberado = localStorage.getItem("me-navegador") === "1"; } catch (e) {}
+  window.PORTA = !instalado && !liberado;
+  if (!window.PORTA) return;
+  var porta = document.getElementById("porta"); porta.hidden = false;
+  document.documentElement.style.overflow = "hidden";
+  var ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  var bt = document.getElementById("porta-instalar");
+  if (ios) { document.getElementById("porta-ios").hidden = false; return; }
+  // Android/computador: botão usa o pedido nativo; se o navegador não oferecer, mostra o passo a passo do menu
+  var pedido = null;
+  var semPedido = setTimeout(function () { if (!pedido) document.getElementById("porta-android").hidden = false; }, 3500);
+  addEventListener("beforeinstallprompt", function (e) {
+    e.preventDefault(); pedido = e; clearTimeout(semPedido);
+    bt.hidden = false; document.getElementById("porta-android").hidden = true;
+  });
+  bt.addEventListener("click", function () {
+    if (!pedido) return;
+    pedido.prompt();
+    pedido.userChoice.then(function (r) { if (r.outcome === "accepted") { bt.hidden = true; } pedido = null; });
+  });
+  addEventListener("appinstalled", function () {
+    bt.hidden = true; document.getElementById("porta-android").hidden = true; document.getElementById("porta-obs").hidden = true;
+    document.getElementById("porta-titulo").textContent = "App instalado ✓";
+    document.getElementById("porta-texto").textContent = "Agora é só abrir pelo ícone na tela do seu celular.";
+  });
 })();
 </script>
 <div id="instalar" hidden role="dialog" aria-labelledby="instalar-titulo">
@@ -1230,8 +1305,8 @@ function telaConfig() {
       </dl></div>
     </section>
     <section><h2>Ajuda</h2>
-      <div class="cartao"><p>Quer mudar de plano, trocar o cartão ou tirar uma dúvida? Fale direto com o Vitor.</p>
-        <a class="botao-app secundario" href="https://wa.me/${WHATS_STUDIO}" target="_blank" rel="noopener">Falar no WhatsApp</a>
+      <div class="cartao"><p>Quer mudar de plano, trocar o cartão ou tirar uma dúvida? Fale com o Studio pela Conversa.</p>
+        ${CHAT_CFG ? `<button class="botao-app secundario" onclick="irAba('chat')">Abrir a Conversa</button>` : ""}
         <a class="botao-app secundario" href="${LINK_CONTRATO}" target="_blank" rel="noopener">Ver o contrato</a>
       </div>
     </section>
@@ -1254,7 +1329,7 @@ function telaCancelar() {
       </div>
     </section>
     <section><div class="cartao"><p><b>Antes de decidir:</b> muitas vezes dá para ajustar, trocando de plano ou mudando o foco do conteúdo.</p>
-      <a class="botao-app secundario" href="https://wa.me/${WHATS_STUDIO}?text=${encodeURIComponent("Oi, Vitor! Estou pensando em mudar algumas coisas no meu plano do Marketing Essencial. Podemos conversar?")}" target="_blank" rel="noopener">Conversar com o Vitor antes</a></div></section>`;
+      ${CHAT_CFG ? `<button class="botao-app secundario" onclick="irAba('chat')">Conversar com o Studio antes</button>` : ""}</div></section>`;
   if (cancEtapa === 2) {
     const titulo = c.tipo === "garantia" ? "Você está na garantia de 30 dias"
       : c.tipo === "livre" ? "Seu contrato já cumpriu o prazo" : `Valores do cancelamento (mês ${c.s.mes} de ${a.prazo})`;
@@ -1281,10 +1356,16 @@ function telaCancelar() {
       </div></section>`;
   }
   return `<section><h2>Falta só um passo</h2><div class="cartao">
-      <p>Abrimos o WhatsApp com o seu pedido de cancelamento já escrito. <b>Toque em enviar</b> para concluir.</p>
+      <p>${CHAT_CFG ? "Seu pedido de cancelamento foi enviado ao Studio pela <b>Conversa</b>." : "Abrimos o WhatsApp com o seu pedido de cancelamento já escrito. <b>Toque em enviar</b> para concluir."}</p>
       <p>O Vitor confirma em até 1 dia útil${c.total ? (c.sentido === "cobrar" ? " e faz a cobrança" : " e faz a devolução") : ""}. Obrigado por ter caminhado com a gente até aqui!</p>
-      <button class="botao-app secundario" onclick="enviarCancelamento()">Abrir o WhatsApp de novo</button>
+      ${CHAT_CFG ? `<button class="botao-app secundario" onclick="irAba('chat')">Ver na Conversa</button>` : `<button class="botao-app secundario" onclick="enviarCancelamento()">Abrir o WhatsApp de novo</button>`}
       <button class="botao-app secundario" onclick="irAba('resumo')">Voltar ao início</button></div></section>`;
+}
+// Pedido formal (cancelamento, senha): vai como mensagem na Conversa; sem Conversa, cai no WhatsApp.
+function enviarPedido(texto) {
+  if (CHAT_CFG) { enviarChat({ texto }); return; }
+  const janela = window.open(`https://wa.me/${WHATS_STUDIO}?text=${encodeURIComponent(texto)}`, "_blank");
+  if (janela) janela.opener = null;
 }
 function enviarCancelamento() {
   if (GESTOR) return avisoEspelho();
@@ -1302,8 +1383,7 @@ function enviarCancelamento() {
       : `Valor a devolver (Cláusula 12.2): ${brl(c.total)}`,
     "Li e concordei com os valores no app.",
   ].join("\n");
-  const janela = window.open(`https://wa.me/${WHATS_STUDIO}?text=${encodeURIComponent(texto)}`, "_blank");
-  if (janela) janela.opener = null;
+  enviarPedido(texto);
   if (cancEtapa !== 3) cancPasso(3);
 }
 
@@ -1364,9 +1444,9 @@ function blocoSenha() {
 function telaSenha() {
   const voltar = `<button class="voltar-app" onclick="irAba('config')">← Voltar</button>`;
   if (senhaEtapa === 2) return `${voltar}<section><h2>Falta só um passo</h2><div class="cartao">
-      <p>Abrimos o WhatsApp com o seu pedido já escrito. <b>Toque em enviar</b> para concluir.</p>
+      <p>${CHAT_CFG ? "Seu pedido foi enviado ao Studio pela <b>Conversa</b>." : "Abrimos o WhatsApp com o seu pedido já escrito. <b>Toque em enviar</b> para concluir."}</p>
       <p>Assim que o Vitor confirmar, a senha nova passa a valer. Na próxima vez que abrir o app, ele pede a senha nova uma vez e depois lembra.</p>
-      <button class="botao-app secundario" onclick="enviarSenha()">Abrir o WhatsApp de novo</button>
+      ${CHAT_CFG ? `<button class="botao-app secundario" onclick="irAba('chat')">Ver na Conversa</button>` : `<button class="botao-app secundario" onclick="enviarSenha()">Abrir o WhatsApp de novo</button>`}
       <button class="botao-app secundario" onclick="irAba('resumo')">Voltar ao início</button></div></section>`;
   return `${voltar}<section><h2>Mudar minha senha</h2><div class="cartao">
       <p>Escolha uma senha fácil de lembrar, com pelo menos 6 letras ou números. Maiúsculas e minúsculas não fazem diferença.</p>
@@ -1388,8 +1468,7 @@ function enviarSenha() {
   if (GESTOR) return avisoEspelho();
   const perfil = document.querySelector(".topo h1").textContent;
   const texto = `Olá, Vitor! Quero mudar a senha do app do Marketing Essencial.\n\nCliente: ${perfil} (${CLIENTE})\nSenha nova: ${senhaNova}`;
-  const janela = window.open(`https://wa.me/${WHATS_STUDIO}?text=${encodeURIComponent(texto)}`, "_blank");
-  if (janela) janela.opener = null;
+  enviarPedido(texto);
   if (senhaEtapa !== 2) { senhaEtapa = 2; window.scrollTo(0, 0); desenhar(); }
 }
 
@@ -1403,7 +1482,7 @@ function telaImplantacao() {
     <li>Diagnóstico com os números de hoje: o "mês zero" para medir o crescimento.</li>
     <li>Respostas automáticas e perguntas frequentes configuradas.</li>
     <li>Modelos de post com a cara da sua marca e o calendário do mês.</li></ol>
-    <p>Dúvidas? ${CHAT_CFG ? `<a href="#" onclick="irAba('chat');return false">Fale com o Vitor aqui na Conversa</a>` : `<a href="https://wa.me/${WHATS_STUDIO}" target="_blank" rel="noopener">Fale com o Vitor no WhatsApp</a>`}.</p></section>`;
+    ${CHAT_CFG ? `<p>Dúvidas? <a href="#" onclick="irAba('chat');return false">Fale com o Studio aqui na Conversa</a>.</p>` : ""}</section>`;
 }
 
 // ---------------------------------------------------------------- Conversa (chat com o Studio)
@@ -1833,7 +1912,7 @@ else carregarReais().then(async () => {
   const caixa = document.getElementById("instalar");
   const instalado = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
   const adiado = (() => { try { return Number(localStorage.getItem("me-instalar-adiado")) || 0; } catch { return 0; } })();
-  if (instalado || Date.now() - adiado < 3 * 864e5) return; // "Agora não" vale por 3 dias
+  if (window.PORTA || instalado || Date.now() - adiado < 3 * 864e5) return; // "Agora não" vale por 3 dias
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   const fechar = () => { caixa.hidden = true; try { localStorage.setItem("me-instalar-adiado", String(Date.now())); } catch { /* */ } };
   caixa.querySelector(".nao").addEventListener("click", fechar);
