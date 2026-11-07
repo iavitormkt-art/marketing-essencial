@@ -554,8 +554,8 @@ html.gestor #porta .barra { background: #fff; }
     document.getElementById("porta-obs").hidden = true; document.getElementById("porta-android").hidden = true;
     document.getElementById("porta-titulo").textContent = "Instalando o app";
     document.getElementById("porta-texto").textContent = "Leva alguns segundos. Fique nesta tela até terminar.";
-    timer = setInterval(function () { pct += (90 - pct) * 0.08; mostrarPct(pct); }, 300);
-    setTimeout(concluir, 45000); // se o aviso de "instalado" não vier, conclui assim mesmo
+    timer = setInterval(function () { pct += (95 - pct) * 0.12; mostrarPct(pct); }, 250);
+    setTimeout(concluir, 15000); // se o aviso de "instalado" não vier, conclui em 15 s
   }
   function concluir() {
     if (pronto) return; pronto = true; clearInterval(timer); mostrarPct(100);
