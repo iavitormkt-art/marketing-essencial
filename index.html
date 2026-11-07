@@ -496,7 +496,7 @@ html.gestor #porta .bt { background: #fff; color: #000; }
       <li><span>Escolha <b>Instalar app</b> (ou <b>Adicionar à tela inicial</b>)</span></li>
       <li><span>Abra pelo ícone novo na tela do celular</span></li>
     </ol>
-    <p class="obs" id="porta-obs">Abriu pelo WhatsApp ou Instagram? Toque em ⋮ e escolha <b>Abrir no navegador</b>.</p>
+    <p class="obs" id="porta-obs">Se não aparecer a opção de instalar, toque em ⋮ e escolha <b>Abrir no Chrome</b>.</p>
   </div>
 </div>
 <script>
@@ -515,14 +515,15 @@ html.gestor #porta .bt { background: #fff; color: #000; }
   var bt = document.getElementById("porta-instalar");
   if (ios) { document.getElementById("porta-ios").hidden = false; return; }
   // Android/computador: botão usa o pedido nativo; se o navegador não oferecer, mostra o passo a passo do menu
+  // O botão "Instalar app" aparece sempre. Se o navegador já liberou a instalação, abre o pedido nativo;
+  // se não (ex.: aberto dentro de outro app), mostra o caminho pelo menu.
   var pedido = null;
-  var semPedido = setTimeout(function () { if (!pedido) document.getElementById("porta-android").hidden = false; }, 3500);
+  bt.hidden = false;
   addEventListener("beforeinstallprompt", function (e) {
-    e.preventDefault(); pedido = e; clearTimeout(semPedido);
-    bt.hidden = false; document.getElementById("porta-android").hidden = true;
+    e.preventDefault(); pedido = e; document.getElementById("porta-android").hidden = true;
   });
   bt.addEventListener("click", function () {
-    if (!pedido) return;
+    if (!pedido) { document.getElementById("porta-android").hidden = false; return; }
     pedido.prompt();
     pedido.userChoice.then(function (r) { if (r.outcome === "accepted") { bt.hidden = true; } pedido = null; });
   });
