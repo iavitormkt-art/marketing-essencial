@@ -432,6 +432,7 @@ html.gestor #abertura .nome b { color: #fff; }
 /* Porta: fora do app instalado, a única coisa na tela é o convite para instalar */
 #porta { position: fixed; inset: 0; z-index: 99; background: #003346; color: #fff; display: grid; place-items: center; padding: 28px 24px;
   text-align: center; font-family: Inter, system-ui, sans-serif; }
+#porta[hidden] { display: none !important; }
 html.gestor #porta { background: #000; }
 #porta .caixa { width: min(100%, 360px); }
 #porta svg { width: 64px; height: 64px; }
