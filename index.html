@@ -505,8 +505,14 @@ html.gestor #porta .bt { background: #fff; color: #000; }
 (function () {
   var q = new URLSearchParams(location.search);
   try { if (q.get("navegador") === "1") localStorage.setItem("me-navegador", "1"); if (q.get("navegador") === "0") localStorage.removeItem("me-navegador"); } catch (e) {}
-  var instalado = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  // Instalado = aberto pelo ícone. Alguns Android instalam como atalho (abre fora do modo app):
+  // por isso o endereço do ícone leva app=1, que vale para a sessão inteira.
+  try { if (q.get("app") === "1") sessionStorage.setItem("me-app", "1"); } catch (e) {}
+  var noApp = false; try { noApp = sessionStorage.getItem("me-app") === "1"; } catch (e) {}
+  var instalado = noApp || navigator.standalone === true ||
+    ["standalone", "minimal-ui", "fullscreen", "window-controls-overlay"].some(function (m) { return matchMedia("(display-mode: " + m + ")").matches; });
   var liberado = false; try { liberado = localStorage.getItem("me-navegador") === "1"; } catch (e) {}
+  window.APP_INSTALADO = instalado;
   window.PORTA = !instalado && !liberado;
   if (!window.PORTA) return;
   var porta = document.getElementById("porta"); porta.hidden = false;
@@ -1722,7 +1728,7 @@ function estadoCompositor() {
 // avisos no celular (Web Push). No iPhone só funciona com o app instalado na tela de início.
 const PUSH_OK = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 const IOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-const INSTALADO = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const INSTALADO = !!window.APP_INSTALADO;
 function blocoAvisos() {
   if (PUSH_OK && Notification.permission === "granted") return "";
   if (PUSH_OK && Notification.permission === "denied") return `<div class="chat-aviso">🔕 Os avisos estão bloqueados. Libere nas configurações do celular para saber quando chegar mensagem.</div>`;
@@ -1868,7 +1874,7 @@ document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click
 // sem ?cliente= e o armazenamento do app começa vazio): em vez da demonstração,
 // pede a senha e descobre o cliente pelo cofre que ela abre.
 const CLIENTES_APP = ["moranguinho", "studio"];
-const ABRIU_INSTALADO = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const ABRIU_INSTALADO = !!window.APP_INSTALADO;
 function descobrirCliente() {
   document.querySelector(".exemplo").hidden = true;
   const tela = document.getElementById("entrada");
@@ -1911,7 +1917,7 @@ else carregarReais().then(async () => {
 // iPhone: a Apple não tem botão; mostramos o passo a passo do Safari.
 (function () {
   const caixa = document.getElementById("instalar");
-  const instalado = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const instalado = !!window.APP_INSTALADO;
   const adiado = (() => { try { return Number(localStorage.getItem("me-instalar-adiado")) || 0; } catch { return 0; } })();
   if (window.PORTA || instalado || Date.now() - adiado < 3 * 864e5) return; // "Agora não" vale por 3 dias
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);

@@ -2,20 +2,20 @@
   "name": "Marketing Essencial · Studio Vitor Campos",
   "short_name": "M. Essencial",
   "description": "Acompanhamento diário do Instagram e do Facebook · Studio Vitor Campos",
-  "start_url": "./?cliente=studio",
+  "start_url": "./?cliente=studio&app=1",
   "display": "standalone",
   "background_color": "#003346",
   "theme_color": "#003346",
   "lang": "pt-BR",
   "icons": [
     {
-      "src": "icone-192.png",
+      "src": "icone-vazio-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icone-512.png",
+      "src": "icone-vazio-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
