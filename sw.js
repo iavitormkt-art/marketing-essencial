@@ -1,5 +1,5 @@
 // Guarda as telas do app para abrir rápido (e sem internet, com os últimos dados)
-const CACHE = "me-v8";
+const CACHE = "me-v9";
 const ARQUIVOS = ["./", "index.html", "manifest.webmanifest", "icone-192.png", "icone-180.png", "marca/logo-vc-96.png"];
 self.addEventListener("install", (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARQUIVOS))));
 self.addEventListener("activate", (e) =>

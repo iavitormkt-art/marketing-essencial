@@ -816,9 +816,17 @@ function desenharTopo() {
 // ---------------------------------------------------------------- blocos
 function cartoesNumeros() {
   const d = dias(), a = anteriores();
+  // A comparação usa só dias fechados: o dia de hoje ainda está em andamento e,
+  // comparado com um dia inteiro, pareceria queda.
+  const parcial = !EXEMPLO && HISTORICO.at(-1)?.data?.toLocaleDateString("sv-SE") === hojeISO();
+  const fechados = parcial ? HISTORICO.slice(0, -1) : HISTORICO;
+  const n = d.length;
+  const atualF = fechados.slice(-n), antesF = fechados.length >= 2 * n ? fechados.slice(-2 * n, -n) : [];
   const card = (rotulo, campo, f = (k) => somaCampo(d, campo, [k])) => {
     const v = somaCampo(d, campo);
-    return [rotulo, num(v), delta(v, somaCampo(a, campo)), false, partes(f)];
+    const dl = periodo === "dia" && parcial ? "parcial · fecha às 23h"
+      : delta(somaCampo(atualF, campo), somaCampo(antesF, campo));
+    return [rotulo, num(v), dl, false, partes(f)];
   };
   const seguidores = ["Seguidores", num(ultimoValor("seguidores")),
     `+${num(somaCampo(d, "novos"))} ${nomePeriodo[periodo]}`, true, partes((k) => ultimoValor("seguidores", [k]))];
