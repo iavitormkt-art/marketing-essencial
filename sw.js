@@ -1,6 +1,6 @@
 // Guarda as telas do app para abrir rápido (e sem internet, com os últimos dados)
-const CACHE = "me-v10";
-const ARQUIVOS = ["./", "index.html", "manifest.webmanifest", "icone-192.png", "icone-180.png", "marca/logo-vc-96.png"];
+const CACHE = "me-v11";
+const ARQUIVOS = ["./", "index.html", "manifest.webmanifest", "icone-192.png", "icone-180.png", "marca/logo-vc-96.png", "som-mensagem.m4a"];
 self.addEventListener("install", (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARQUIVOS))));
 self.addEventListener("activate", (e) =>
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k))))),
@@ -25,7 +25,7 @@ self.addEventListener("push", (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch { d = { corpo: e.data?.text() }; }
   e.waitUntil(self.registration.showNotification(d.titulo || "Marketing Essencial", {
-    body: d.corpo || "Mensagem nova", icon: "icone-192.png", badge: "icone-192.png", tag: "conversa", renotify: true,
+    body: d.corpo || "Mensagem nova", icon: "icone-192.png", badge: "icone-192.png", tag: "conversa", renotify: true, vibrate: [90, 60, 90],
     data: { url: new URL(d.url || "./?aba=chat", self.registration.scope).href },
   }));
 });
