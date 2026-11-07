@@ -1735,6 +1735,11 @@ function iniciarChatPolling() {
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden) buscarChat(); });
 
+// Um áudio/vídeo por vez: ao tocar um, os outros pausam (como no WhatsApp)
+document.addEventListener("play", (e) => {
+  document.querySelectorAll("audio, video").forEach((m) => { if (m !== e.target && !m.paused) m.pause(); });
+}, true);
+
 function bolha(m) {
   const minha = m.de === EU();
   let corpo = "";
