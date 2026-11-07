@@ -245,6 +245,18 @@ nav button .contador-nav { position: absolute; top: 0; right: 8px; min-width: 17
 .compositor button { flex: none; width: 42px; height: 42px; border-radius: 50%; border: 0; background: var(--marca-suave); color: var(--marca); display: grid; place-items: center; cursor: pointer; }
 .compositor button svg { width: 21px; height: 21px; }
 .compositor [hidden] { display: none !important; }
+.mais-bt { position: relative; flex: none; }
+.mais-bt > button { transition: transform .15s; }
+.mais-bt > button.aberto { transform: rotate(45deg); }
+.menu-anexo { position: absolute; left: 0; bottom: 52px; min-width: 190px; background: var(--cartao); border-radius: 16px; box-shadow: 0 8px 28px rgba(0, 30, 45, .22); padding: 6px; z-index: 8; }
+.menu-anexo label { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; font-size: 15.5px; font-weight: 600; color: var(--texto); cursor: pointer; }
+.menu-anexo label:active, .menu-anexo label:hover { background: var(--marca-suave); }
+.menu-anexo svg { width: 22px; height: 22px; color: var(--marca); flex: none; }
+.bolha video { display: block; max-width: 100%; border-radius: 10px; margin: 2px 0 4px; background: #000; }
+.bolha .anexo { display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin: 2px 0 4px; border-radius: 10px; background: rgba(127, 127, 127, .12); color: inherit; text-decoration: none; font-weight: 600; font-size: 14px; }
+.bolha .anexo svg { width: 24px; height: 24px; flex: none; }
+.bolha .anexo span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 .compositor button.enviar { background: var(--marca); color: var(--sobre-marca); }
 .compositor button.gravando { background: #e02424; color: #fff; animation: pulso 1.2s infinite; }
 @keyframes pulso { 50% { opacity: .65; } }
@@ -661,7 +673,7 @@ function telaSeletor() {
   return `<section><h2>Clientes</h2>
     <p class="vazio" style="margin:0 0 8px">Toque num cliente para ver o app exatamente como ele vê.</p>
     <div class="cartao">${lista.map((c) => { const r = (CHAT_RESUMO || []).find((x) => x.cliente === c.id);
-      const ult = r?.ultima ? `${r.ultima.de === "studio" ? "Você: " : ""}${r.ultima.tipo === "foto" ? "📷 Foto" : r.ultima.tipo === "audio" ? "🎤 Áudio" : r.ultima.texto}` : "";
+      const ult = r?.ultima ? `${r.ultima.de === "studio" ? "Você: " : ""}${r.ultima.tipo === "foto" ? "📷 Foto" : r.ultima.tipo === "audio" ? "🎤 Áudio" : r.ultima.tipo === "video" ? "🎬 Vídeo" : r.ultima.tipo === "arquivo" ? "📎 Arquivo" : r.ultima.texto}` : "";
       return `<a class="cliente-item" href="./?gestor&cliente=${encodeURIComponent(c.id)}${r?.naoLidas ? "&aba=chat" : ""}">
       <div class="avatar" aria-hidden="true">${/^data:image\//.test(c.logo || "") ? `<img src="${c.logo}" alt="">` : esc((c.nome || c.id)[0].toUpperCase())}</div>
       <div><b>${esc(c.nome || c.id)}</b><span class="sub">${ult ? `<span class="ultima">${esc(ult)}</span>` : esc(c.id)}</span></div>${r?.naoLidas ? `<span class="naolidas">${r.naoLidas}</span>` : ""}</a>`; }).join("") || `<p class="vazio">Nenhum cliente no cofre do gestor.</p>`}
@@ -1304,6 +1316,8 @@ function bolha(m) {
   let corpo = "";
   if (m.tipo === "foto") corpo = `<img data-midia="${m.id}" alt="Foto">`;
   else if (m.tipo === "audio") corpo = `<audio data-midia="${m.id}" controls preload="none"></audio>`;
+  else if (m.tipo === "video") corpo = `<video data-midia="${m.id}" controls playsinline preload="metadata"></video>`;
+  else if (m.tipo === "arquivo") corpo = `<a class="anexo" data-midia="${m.id}" data-nome="${esc(m.nome || "arquivo")}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg><span>${esc(m.nome || "Arquivo")}</span></a>`;
   const texto = m.texto ? esc(m.texto).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>') : "";
   const outro = EU() === "studio" ? "cliente" : "studio";
   const visto = minha && !m.enviando && (CHAT_LIDOS[outro] || 0) >= m.id ? " · lida" : "";
@@ -1332,13 +1346,14 @@ async function carregarMidias() {
       if (!r?.ok) continue;
       CHAT_MIDIAS.set(id, URL.createObjectURL(await r.blob()));
     }
+    if (el.tagName === "A") { el.href = CHAT_MIDIAS.get(id); el.download = el.dataset.nome || "arquivo"; continue; }
     if (el.src !== CHAT_MIDIAS.get(id)) el.src = CHAT_MIDIAS.get(id);
     if (el.tagName === "IMG") el.onclick = () => { const f = document.createElement("div"); f.className = "foto-grande"; f.innerHTML = `<img src="${el.src}" alt="">`; f.onclick = () => f.remove(); document.body.appendChild(f); };
   }
 }
 
 async function enviarChat(dados) {
-  const temp = { id: 1e12 + Date.now(), de: EU(), texto: dados.texto || "", tipo: dados.arquivo ? (dados.arquivo.type.startsWith("image") ? "foto" : "audio") : "texto", em: new Date().toISOString(), enviando: true };
+  const temp = { id: 1e12 + Date.now(), de: EU(), texto: dados.texto || "", tipo: dados.arquivo ? (/^image/.test(dados.arquivo.type) ? "foto" : /^audio/.test(dados.arquivo.type) ? "audio" : /^video/.test(dados.arquivo.type) ? "video" : "arquivo") : "texto", nome: dados.nome, em: new Date().toISOString(), enviando: true };
   if (dados.arquivo) CHAT_MIDIAS.set(temp.id, URL.createObjectURL(dados.arquivo));
   CHAT_MSGS.push(temp);
   desenharMensagens(true);
@@ -1478,7 +1493,14 @@ function telaChat() {
     <div class="chat-lista" id="chat-lista"></div>
     <div class="compositor"><div class="tela">
       <button id="chat-cancelar" hidden aria-label="Cancelar gravação" onclick="cancelarGravacao()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
-      <label id="chat-foto-bt" class="foto-bt"><input type="file" accept="image/*" hidden onchange="escolheuFoto(this)"><button type="button" aria-label="Enviar foto" onclick="this.previousElementSibling.click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button></label>
+      <div id="chat-foto-bt" class="mais-bt">
+        <button type="button" aria-label="Anexar" aria-expanded="false" onclick="menuAnexo()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+        <div class="menu-anexo" id="menu-anexo" hidden>
+          <label><input type="file" accept="image/*" capture="environment" hidden onchange="escolheuArquivo(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Câmera</label>
+          <label><input type="file" accept="image/*,video/*" hidden onchange="escolheuArquivo(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>Fotos</label>
+          <label><input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,image/*" hidden onchange="escolheuArquivo(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4"/></svg>Arquivos</label>
+        </div>
+      </div>
       <textarea id="chat-texto" rows="1" placeholder="Mensagem" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';estadoCompositor()"></textarea>
       <span id="chat-tempo" class="tempo" hidden>0:00</span>
       <button id="chat-audio" aria-label="Gravar áudio" onclick="alternarGravacao()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
@@ -1492,12 +1514,22 @@ function enviarTexto() {
   c.value = ""; c.style.height = "auto"; estadoCompositor();
   enviarChat({ texto: t });
 }
-async function escolheuFoto(input) {
+function menuAnexo(abrir) {
+  const m = document.getElementById("menu-anexo"), b = document.querySelector("#chat-foto-bt > button");
+  const vai = abrir ?? m.hidden;
+  m.hidden = !vai; b.setAttribute("aria-expanded", String(vai)); b.classList.toggle("aberto", vai);
+}
+document.addEventListener("click", (e) => { if (!e.target.closest?.("#chat-foto-bt")) document.getElementById("menu-anexo") && menuAnexo(false); });
+const LIMITE_ARQ = 1_800_000;
+async function escolheuArquivo(input) {
   const arq = input.files?.[0];
   input.value = "";
+  menuAnexo(false);
   if (!arq) return;
-  const foto = await reduzirFoto(arq);
-  enviarChat({ arquivo: foto, nome: "foto.jpg" });
+  if (arq.type.startsWith("image/") && !/gif/.test(arq.type)) { enviarChat({ arquivo: await reduzirFoto(arq), nome: "foto.jpg" }); return; }
+  if (arq.size > LIMITE_ARQ) { alertaChat(`Arquivo grande demais (máx. 1,8 MB). ${arq.type.startsWith("video/") ? "Mande um vídeo mais curto." : "Tente um arquivo menor."}`); return; }
+  if (!arq.type) { alertaChat("Tipo de arquivo não aceito. Envie PDF, Word, Excel, PowerPoint, imagem ou vídeo."); return; }
+  enviarChat({ arquivo: arq, nome: arq.name });
 }
 function ligarChat() {
   if (aba !== "chat") return;
