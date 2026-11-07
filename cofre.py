@@ -14,6 +14,8 @@
 #   python cofre.py logo <cliente> <imagem> [--fundo #RRGGBB]   foto de perfil no app (círculo com a logo)
 #   python cofre.py gestor             refaz dados/gestor.enc.json (lista de clientes + senhas, cifrada com SENHA_GESTOR)
 #   python cofre.py trocar-senha <cliente> <nova>   troca a senha (pedido do app pelo WhatsApp) e refaz o cofre
+#   python cofre.py chat <cliente|gestor>   liga o chat do app: cria CHAT_<CLIENTE> no .env, registra no servidor
+#                                           e guarda {"chat": {"token", "servidor"}} dentro do cofre
 #
 # A senha vem de SENHA_<CLIENTE> (no .env local ou nos segredos do GitHub). Nunca é impressa.
 #
@@ -169,9 +171,55 @@ def atualizar_gestor():
         except Exception:
             continue
         clientes.append({"id": cid, "nome": nome, "senha": senha, "logo": dados.get("logo")})
-    texto = json.dumps({"clientes": clientes}, ensure_ascii=False).encode("utf-8")
+    gestor = {"clientes": clientes}
+    if ENV.get("CHAT_GESTOR"):
+        gestor["chat"] = {"token": ENV["CHAT_GESTOR"], "servidor": SERVIDOR}
+    texto = json.dumps(gestor, ensure_ascii=False).encode("utf-8")
     gravar_envelope("gestor", PASTA / "dados" / "gestor.enc.json", texto, mestra)
     print(f"cofre do gestor refeito ({len(clientes)} clientes)")
+
+
+SERVIDOR = "https://marketing-essencial-asaas.studiovitorcampos.workers.dev"
+SEGREDOS = os.path.expanduser(r"~\.segredos\servidor-asaas.txt")  # ADMIN_TOKEN do servidor (fora do OneDrive)
+
+
+def token_chat(cliente):
+    """Token do chat do cliente (ou do gestor): lê CHAT_<CLIENTE> do .env ou cria. Nunca é impresso."""
+    nome = f"CHAT_{cliente.upper().replace('-', '_')}"
+    if not ENV.get(nome):
+        novo = secrets.token_urlsafe(32)
+        with (PASTA / ".env").open("a", encoding="utf-8") as f:
+            f.write(f"\n# Token do chat do app ({cliente}); também fica dentro do cofre criptografado\n{nome}={novo}\n")
+        ENV[nome] = novo
+    return ENV[nome]
+
+
+def registrar_chat(cliente, token, nome=None):
+    import urllib.request
+    admin = next((l.split("=", 1)[1].strip() for l in open(SEGREDOS, encoding="utf-8") if l.startswith("ADMIN_TOKEN=")), None)
+    if not admin:
+        sys.exit("ADMIN_TOKEN não encontrado em " + SEGREDOS)
+    corpo = json.dumps({"cliente": "__gestor" if cliente == "gestor" else cliente, "token": token, "nome": nome}).encode()
+    req = urllib.request.Request(f"{SERVIDOR}/admin/app?token={admin}", data=corpo, method="POST",
+                                 headers={"content-type": "application/json", "user-agent": "cofre.py"})
+    with urllib.request.urlopen(req, timeout=30) as r:
+        if json.load(r).get("ok") is not True:
+            sys.exit("o servidor não confirmou o registro")
+
+
+def ligar_chat(cliente):
+    token = token_chat(cliente)
+    if cliente == "gestor":
+        registrar_chat("gestor", token)
+        atualizar_gestor()
+        print("chat do gestor ligado (falta publicar: commit + push)")
+        return
+    conteudo = abrir(cliente)
+    registrar_chat(cliente, token, conteudo.get("nome") or cliente.capitalize())
+    conteudo["chat"] = {"token": token, "servidor": SERVIDOR}
+    fechar(cliente, conteudo)
+    atualizar_gestor()
+    print(f"chat de {cliente} ligado (falta publicar: commit + push)")
 
 
 def trocar_senha(cliente, nova):
@@ -199,7 +247,7 @@ def trocar_senha(cliente, nova):
 
 
 def main():
-    acoes = ("fechar", "abrir", "senha", "trocar-senha", "gestor", "logo")
+    acoes = ("fechar", "abrir", "senha", "trocar-senha", "gestor", "logo", "chat")
     if len(sys.argv) < 2 or sys.argv[1] not in acoes or (sys.argv[1] != "gestor" and len(sys.argv) < 3):
         print(__doc__)
         sys.exit(1)
@@ -211,6 +259,8 @@ def main():
         gravar_logo(cliente, sys.argv[3], sys.argv[sys.argv.index("--fundo") + 1] if "--fundo" in sys.argv else None)
     elif acao == "gestor":
         atualizar_gestor()
+    elif acao == "chat":
+        ligar_chat(cliente)
     elif acao == "trocar-senha":
         trocar_senha(cliente, sys.argv[3])
     elif acao == "abrir":

@@ -227,6 +227,34 @@ nav button[aria-current="page"] { color: var(--marca); }
 .vazio { color: var(--texto-3); font-size: 14px; }
 .rodape { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: var(--texto-3); margin: 22px 0 8px; }
 .rodape img { width: 20px; height: 20px; border-radius: 50%; }
+/* ---------- chat (Conversa com o Studio) */
+nav button { position: relative; }
+nav button .contador-nav { position: absolute; top: 0; right: 8px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: #e02424; color: #fff; font-size: 10.5px; font-weight: 800; line-height: 17px; text-align: center; }
+.chat-lista { display: flex; flex-direction: column; gap: 6px; padding-bottom: 150px; }
+.chat-dia { align-self: center; font-size: 11.5px; font-weight: 700; color: var(--texto-3); background: var(--cartao); border-radius: 10px; padding: 3px 10px; margin: 8px 0 2px; }
+.bolha { max-width: 82%; padding: 8px 12px 6px; border-radius: 16px; background: var(--cartao); box-shadow: var(--sombra); font-size: 15px; white-space: pre-wrap; word-wrap: break-word; }
+.bolha.minha { align-self: flex-end; background: var(--marca); color: var(--sobre-marca); border-bottom-right-radius: 5px; }
+.bolha.dele { align-self: flex-start; border-bottom-left-radius: 5px; }
+.bolha .hora { display: block; text-align: right; font-size: 11px; opacity: .7; margin-top: 2px; }
+.bolha img { display: block; max-width: 100%; border-radius: 10px; margin: 2px 0 4px; min-height: 80px; background: var(--marca-suave); cursor: zoom-in; }
+.bolha audio { width: 230px; max-width: 100%; height: 40px; display: block; margin: 2px 0; }
+.bolha.enviando { opacity: .6; }
+.compositor { position: fixed; left: 0; right: 0; bottom: calc(62px + env(safe-area-inset-bottom)); z-index: 6; background: var(--fundo); border-top: 1px solid var(--linha); padding: 8px 0; }
+.compositor .tela { display: flex; align-items: flex-end; gap: 8px; }
+.compositor textarea { flex: 1; resize: none; font: inherit; font-size: 16px; border: 1px solid var(--linha); border-radius: 20px; padding: 9px 14px; max-height: 120px; background: var(--cartao); color: var(--texto); }
+.compositor button { flex: none; width: 42px; height: 42px; border-radius: 50%; border: 0; background: var(--marca-suave); color: var(--marca); display: grid; place-items: center; cursor: pointer; }
+.compositor button svg { width: 21px; height: 21px; }
+.compositor [hidden] { display: none !important; }
+.compositor button.enviar { background: var(--marca); color: var(--sobre-marca); }
+.compositor button.gravando { background: #e02424; color: #fff; animation: pulso 1.2s infinite; }
+@keyframes pulso { 50% { opacity: .65; } }
+.compositor .tempo { align-self: center; font-weight: 700; color: #e02424; font-variant-numeric: tabular-nums; }
+.chat-aviso { display: flex; gap: 10px; align-items: center; font-size: 13.5px; background: var(--aviso-suave); border-radius: 14px; padding: 10px 12px; margin-bottom: 10px; }
+.chat-aviso button { margin-left: auto; flex: none; border: 0; border-radius: 10px; background: var(--marca); color: var(--sobre-marca); font: inherit; font-weight: 700; font-size: 13px; padding: 8px 10px; cursor: pointer; }
+.cliente-item .naolidas { margin-left: auto; min-width: 22px; height: 22px; border-radius: 11px; background: #e02424; color: #fff; font-size: 12px; font-weight: 800; line-height: 22px; text-align: center; padding: 0 6px; }
+.cliente-item .ultima { display: block; font-size: 12.5px; color: var(--texto-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+.foto-grande { position: fixed; inset: 0; z-index: 60; background: rgba(0,0,0,.92); display: grid; place-items: center; }
+.foto-grande img { max-width: 100%; max-height: 100%; }
 /* configurações e assinatura (discreto: engrenagem no topo) */
 body.seletor nav, body.seletor .periodos, body.seletor .redes, body.seletor .sino,
 body.seletor .engrenagem, body.seletor .exemplo { display: none !important; }
@@ -409,6 +437,9 @@ body.seletor .engrenagem, body.seletor .exemplo { display: none !important; }
     </button>
     <button data-aba="conversas">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>Comentários
+    </button>
+    <button data-aba="chat" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg>Conversa
     </button>
     <button data-aba="relatorio">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Relatório
@@ -612,15 +643,17 @@ function faixaGestor() {
   const faixa = document.querySelector(".faixa .tela");
   if (SELETOR) { faixa.innerHTML = `<img src="marca/logo-vc-96.png" alt=""><span><b>Área do gestor</b> · Studio Vitor Campos</span>`; return; }
   const nome = NOME_CLIENTE || GESTOR_DADOS?.clientes.find((c) => c.id === CLIENTE)?.nome || CLIENTE;
-  faixa.innerHTML = `<span>👁 Espelho de <b>${esc(nome)}</b> · só visualização</span><a href="./?gestor">Trocar cliente</a>`;
+  faixa.innerHTML = `<span>👁 Espelho de <b>${esc(nome)}</b> · na Conversa você responde como Studio</span><a href="./?gestor">Trocar cliente</a>`;
 }
 function telaSeletor() {
   const lista = GESTOR_DADOS?.clientes || [];
   return `<section><h2>Clientes</h2>
     <p class="vazio" style="margin:0 0 8px">Toque num cliente para ver o app exatamente como ele vê.</p>
-    <div class="cartao">${lista.map((c) => `<a class="cliente-item" href="./?gestor&cliente=${encodeURIComponent(c.id)}">
+    <div class="cartao">${lista.map((c) => { const r = (CHAT_RESUMO || []).find((x) => x.cliente === c.id);
+      const ult = r?.ultima ? `${r.ultima.de === "studio" ? "Você: " : ""}${r.ultima.tipo === "foto" ? "📷 Foto" : r.ultima.tipo === "audio" ? "🎤 Áudio" : r.ultima.texto}` : "";
+      return `<a class="cliente-item" href="./?gestor&cliente=${encodeURIComponent(c.id)}${r?.naoLidas ? "&aba=chat" : ""}">
       <div class="avatar" aria-hidden="true">${/^data:image\//.test(c.logo || "") ? `<img src="${c.logo}" alt="">` : esc((c.nome || c.id)[0].toUpperCase())}</div>
-      <div><b>${esc(c.nome || c.id)}</b><span class="sub">${esc(c.id)}</span></div></a>`).join("") || `<p class="vazio">Nenhum cliente no cofre do gestor.</p>`}
+      <div><b>${esc(c.nome || c.id)}</b><span class="sub">${ult ? `<span class="ultima">${esc(ult)}</span>` : esc(c.id)}</span></div>${r?.naoLidas ? `<span class="naolidas">${r.naoLidas}</span>` : ""}</a>`; }).join("") || `<p class="vazio">Nenhum cliente no cofre do gestor.</p>`}
       <a class="cliente-item" href="./?gestor&cliente=">
       <div class="avatar" aria-hidden="true">?</div>
       <div><b>Protótipo com dados de exemplo</b><span class="sub">o que um cliente novo vê na demonstração</span></div></a>
@@ -632,7 +665,8 @@ function telaSeletor() {
 async function carregarReais() {
   if (GESTOR) {
     try { GESTOR_DADOS = await abrirGestor(); } catch { GESTOR_DADOS = { clientes: [] }; }
-    if (PARAMS.get("cliente") === null) { SELETOR = true; document.body.classList.add("seletor"); return; }
+    CHAT_CFG = GESTOR_DADOS.chat || null;
+    if (PARAMS.get("cliente") === null) { SELETOR = true; document.body.classList.add("seletor"); await carregarResumoChat(); return; }
   }
   if (!CLIENTE) return;
   try {
@@ -649,6 +683,7 @@ async function carregarReais() {
       ASSINATURA_REAL = conteudo.assinatura || null;
       NOME_CLIENTE = conteudo.nome || "";
       LOGO_CLIENTE = /^data:image\//.test(conteudo.logo || "") ? conteudo.logo : "";
+      if (!GESTOR) CHAT_CFG = conteudo.chat?.token ? conteudo.chat : null;
     } else {
       const r2 = await fetch(`dados/${encodeURIComponent(CLIENTE)}.json`, { cache: "no-cache" });
       if (!r2.ok) return;
@@ -685,7 +720,7 @@ const PASSOS = [
 
 // ---------------------------------------------------------------- estado
 let periodo = "dia";
-let aba = "resumo";
+let aba = new URLSearchParams(location.search).get("aba") === "chat" ? "chat" : "resumo";
 let rede = "ambos";
 
 const NOME_REDE = { instagram: "Instagram", facebook: "Facebook" };
@@ -991,6 +1026,7 @@ function irAba(nome) {
   });
   window.scrollTo(0, 0);
   desenhar();
+  iniciarChatPolling();
 }
 function cancPasso(n) { cancEtapa = n; window.scrollTo(0, 0); desenhar(); }
 
@@ -1185,7 +1221,288 @@ function telaImplantacao() {
     <li>Diagnóstico com os números de hoje: o "mês zero" para medir o crescimento.</li>
     <li>Respostas automáticas e perguntas frequentes configuradas.</li>
     <li>Modelos de post com a cara da sua marca e o calendário do mês.</li></ol>
-    <p>Dúvidas? <a href="https://wa.me/${WHATS_STUDIO}" target="_blank" rel="noopener">Fale com o Vitor no WhatsApp</a>.</p></section>`;
+    <p>Dúvidas? ${CHAT_CFG ? `<a href="#" onclick="irAba('chat');return false">Fale com o Vitor aqui na Conversa</a>` : `<a href="https://wa.me/${WHATS_STUDIO}" target="_blank" rel="noopener">Fale com o Vitor no WhatsApp</a>`}.</p></section>`;
+}
+
+// ---------------------------------------------------------------- Conversa (chat com o Studio)
+// Texto, foto e áudio entre o cliente e o Studio, guardados no servidor do Studio
+// (uma sala por cliente). O acesso usa o token que vem dentro do cofre criptografado:
+// cliente -> conteudo.chat; gestor (Vitor) -> GESTOR_DADOS.chat, falando como "studio".
+let CHAT_CFG = null;        // {token, servidor}
+let CHAT_MSGS = [];         // mensagens já carregadas
+let CHAT_LIDOS = {};        // {cliente: id, studio: id}
+let CHAT_TIMER = null;
+let CHAT_RESUMO = null;     // área do gestor: [{cliente, naoLidas, ultima}]
+const EU = () => (GESTOR ? "studio" : "cliente");
+const CHAT_MIDIAS = new Map(); // id -> blob URL
+const chatApi = (caminho, opc = {}) => fetch(`${CHAT_CFG.servidor}${caminho}`, { ...opc, headers: { "x-app-token": CHAT_CFG.token, ...(opc.headers || {}) } });
+const chatQ = () => `cliente=${encodeURIComponent(CLIENTE)}`;
+const hhmm = (iso) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+const diaChat = (iso) => {
+  const d = new Date(iso), h = new Date(); const ontem = new Date(Date.now() - 864e5);
+  if (d.toDateString() === h.toDateString()) return "Hoje";
+  if (d.toDateString() === ontem.toDateString()) return "Ontem";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "long" });
+};
+
+function naoLidasChat() {
+  const meu = CHAT_LIDOS[EU()] || 0;
+  return CHAT_MSGS.filter((m) => m.de !== EU() && m.id > meu).length;
+}
+function marcarContadorChat() {
+  const b = document.querySelector('nav button[data-aba="chat"]');
+  if (!b) return;
+  b.hidden = !CHAT_CFG;
+  let c = b.querySelector(".contador-nav");
+  const n = aba === "chat" ? 0 : naoLidasChat();
+  if (n && !c) { c = document.createElement("span"); c.className = "contador-nav"; b.appendChild(c); }
+  if (c) { c.textContent = n > 9 ? "9+" : String(n); c.hidden = !n; }
+  if (!GESTOR && "setAppBadge" in navigator) (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
+}
+
+async function buscarChat() {
+  if (!CHAT_CFG || !CLIENTE) return;
+  const ultimo = CHAT_MSGS.at(-1)?.id || 0;
+  const r = await chatApi(`/chat?${chatQ()}&depois=${ultimo}`).catch(() => null);
+  if (!r?.ok) return;
+  const d = await r.json();
+  CHAT_LIDOS = d.lidos || {};
+  const novas = d.msgs.filter((m) => !CHAT_MSGS.some((x) => x.id === m.id));
+  if (novas.length) {
+    CHAT_MSGS.push(...novas);
+    if (aba === "chat") desenharMensagens(true);
+  }
+  if (aba === "chat") marcarLido();
+  marcarContadorChat();
+}
+async function marcarLido() {
+  const ultimo = CHAT_MSGS.at(-1)?.id || 0;
+  if (!ultimo || (CHAT_LIDOS[EU()] || 0) >= ultimo) return;
+  CHAT_LIDOS[EU()] = ultimo;
+  chatApi(`/chat/lido?${chatQ()}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ate: ultimo }) }).catch(() => {});
+}
+function iniciarChatPolling() {
+  clearInterval(CHAT_TIMER);
+  if (!CHAT_CFG || !CLIENTE) return;
+  CHAT_TIMER = setInterval(buscarChat, aba === "chat" ? 4000 : 60000);
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden) buscarChat(); });
+
+function bolha(m) {
+  const minha = m.de === EU();
+  let corpo = "";
+  if (m.tipo === "foto") corpo = `<img data-midia="${m.id}" alt="Foto">`;
+  else if (m.tipo === "audio") corpo = `<audio data-midia="${m.id}" controls preload="none"></audio>`;
+  const texto = m.texto ? esc(m.texto).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>') : "";
+  const outro = EU() === "studio" ? "cliente" : "studio";
+  const visto = minha && !m.enviando && (CHAT_LIDOS[outro] || 0) >= m.id ? " · lida" : "";
+  return `<div class="bolha ${minha ? "minha" : "dele"}${m.enviando ? " enviando" : ""}" data-id="${m.id}">${corpo}${texto}<span class="hora">${m.enviando ? "enviando…" : hhmm(m.em) + visto}</span></div>`;
+}
+function desenharMensagens(rolar) {
+  const lista = document.getElementById("chat-lista");
+  if (!lista) return;
+  const perto = innerHeight + scrollY >= document.body.scrollHeight - 240;
+  let html = "", dia = "";
+  for (const m of CHAT_MSGS) {
+    const d = diaChat(m.em);
+    if (d !== dia) { html += `<div class="chat-dia">${d}</div>`; dia = d; }
+    html += bolha(m);
+  }
+  lista.innerHTML = html || `<div class="cartao vazio">${GESTOR ? "Nenhuma mensagem ainda. Escreva para o cliente por aqui." :
+    "Fale com o Studio por aqui: pedidos, dúvidas, fotos de produtos e áudios. A gente responde no horário comercial."}</div>`;
+  carregarMidias();
+  if (rolar || perto) requestAnimationFrame(() => scrollTo(0, document.body.scrollHeight));
+}
+async function carregarMidias() {
+  for (const el of document.querySelectorAll("[data-midia]")) {
+    const id = Number(el.dataset.midia);
+    if (!CHAT_MIDIAS.has(id)) {
+      const r = await chatApi(`/chat/midia?${chatQ()}&id=${id}`).catch(() => null);
+      if (!r?.ok) continue;
+      CHAT_MIDIAS.set(id, URL.createObjectURL(await r.blob()));
+    }
+    if (el.src !== CHAT_MIDIAS.get(id)) el.src = CHAT_MIDIAS.get(id);
+    if (el.tagName === "IMG") el.onclick = () => { const f = document.createElement("div"); f.className = "foto-grande"; f.innerHTML = `<img src="${el.src}" alt="">`; f.onclick = () => f.remove(); document.body.appendChild(f); };
+  }
+}
+
+async function enviarChat(dados) {
+  const temp = { id: 1e12 + Date.now(), de: EU(), texto: dados.texto || "", tipo: dados.arquivo ? (dados.arquivo.type.startsWith("image") ? "foto" : "audio") : "texto", em: new Date().toISOString(), enviando: true };
+  if (dados.arquivo) CHAT_MIDIAS.set(temp.id, URL.createObjectURL(dados.arquivo));
+  CHAT_MSGS.push(temp);
+  desenharMensagens(true);
+  try {
+    let r;
+    if (dados.arquivo) {
+      const f = new FormData();
+      f.append("arquivo", dados.arquivo, dados.nome || "arquivo");
+      if (dados.texto) f.append("texto", dados.texto);
+      if (dados.duracao) f.append("duracao", String(dados.duracao));
+      r = await chatApi(`/chat?${chatQ()}`, { method: "POST", body: f });
+    } else {
+      r = await chatApi(`/chat?${chatQ()}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ texto: dados.texto }) });
+    }
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.erro || "falhou");
+    if (dados.arquivo) { CHAT_MIDIAS.set(j.msg.id, CHAT_MIDIAS.get(temp.id)); }
+    CHAT_MSGS = CHAT_MSGS.filter((m) => m.id !== temp.id);
+    if (!CHAT_MSGS.some((m) => m.id === j.msg.id)) CHAT_MSGS.push(j.msg);
+    CHAT_MSGS.sort((a, b) => a.id - b.id);
+  } catch (e) {
+    CHAT_MSGS = CHAT_MSGS.filter((m) => m.id !== temp.id);
+    alertaChat(e.message === "arquivo grande demais" ? "Arquivo grande demais. Tente um áudio mais curto." : "Não foi possível enviar. Confira a internet e tente de novo.");
+  }
+  desenharMensagens(true);
+  marcarLido();
+}
+function alertaChat(t) {
+  const el = document.getElementById("chat-erro");
+  if (el) { el.textContent = t; el.hidden = false; setTimeout(() => { el.hidden = true; }, 5000); }
+}
+
+// fotos: reduz para no máximo 1600 px (JPEG) antes de enviar
+async function reduzirFoto(arquivo) {
+  try {
+    const img = await createImageBitmap(arquivo);
+    const esc2 = Math.min(1, 1600 / Math.max(img.width, img.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(img.width * esc2); c.height = Math.round(img.height * esc2);
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height); // PNG transparente não fica preto no JPEG
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    return await new Promise((ok) => c.toBlob(ok, "image/jpeg", 0.82));
+  } catch { return arquivo; }
+}
+
+// áudio: toque para gravar, toque de novo para enviar (até 3 min)
+let GRAVADOR = null, GRAV_INICIO = 0, GRAV_TIMER = null, GRAV_CANCELAR = false;
+async function alternarGravacao() {
+  const botao = document.getElementById("chat-audio");
+  if (GRAVADOR) { GRAVADOR.stop(); return; }
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { alertaChat("Este aparelho não grava áudio pelo app."); return; }
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch { alertaChat("Libere o microfone para gravar áudio."); return; }
+  const tipo = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg"].find((t) => MediaRecorder.isTypeSupported(t)) || "";
+  GRAVADOR = new MediaRecorder(stream, tipo ? { mimeType: tipo, audioBitsPerSecond: 48000 } : undefined);
+  const partes = [];
+  GRAV_CANCELAR = false;
+  GRAVADOR.ondataavailable = (e) => e.data.size && partes.push(e.data);
+  GRAVADOR.onstop = () => {
+    stream.getTracks().forEach((t) => t.stop());
+    clearInterval(GRAV_TIMER);
+    const dur = (Date.now() - GRAV_INICIO) / 1000;
+    const mime = (GRAVADOR.mimeType || tipo || "audio/webm").split(";")[0];
+    GRAVADOR = null;
+    estadoCompositor();
+    if (GRAV_CANCELAR || dur < 0.8) return;
+    const blob = new Blob(partes, { type: mime });
+    enviarChat({ arquivo: blob, nome: `audio.${mime.includes("mp4") ? "m4a" : mime.split("/")[1]}`, duracao: Math.round(dur) });
+  };
+  GRAVADOR.start();
+  GRAV_INICIO = Date.now();
+  GRAV_TIMER = setInterval(() => {
+    const s = Math.floor((Date.now() - GRAV_INICIO) / 1000);
+    const t = document.getElementById("chat-tempo"); if (t) t.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    if (s >= 180) GRAVADOR?.stop();
+  }, 250);
+  estadoCompositor();
+}
+function cancelarGravacao() { if (GRAVADOR) { GRAV_CANCELAR = true; GRAVADOR.stop(); } }
+function estadoCompositor() {
+  const g = !!GRAVADOR;
+  const caixa = document.getElementById("chat-texto");
+  if (!caixa) return;
+  const temTexto = caixa.value.trim().length > 0;
+  document.getElementById("chat-foto-bt").hidden = g;
+  caixa.hidden = g;
+  document.getElementById("chat-tempo").hidden = !g;
+  document.getElementById("chat-cancelar").hidden = !g;
+  const audio = document.getElementById("chat-audio"), enviar = document.getElementById("chat-enviar");
+  audio.hidden = temTexto && !g; enviar.hidden = !temTexto || g;
+  audio.classList.toggle("gravando", g);
+  audio.setAttribute("aria-label", g ? "Parar e enviar o áudio" : "Gravar áudio");
+}
+
+// avisos no celular (Web Push). No iPhone só funciona com o app instalado na tela de início.
+const PUSH_OK = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+const IOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+const INSTALADO = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+function blocoAvisos() {
+  if (PUSH_OK && Notification.permission === "granted") return "";
+  if (PUSH_OK && Notification.permission === "denied") return `<div class="chat-aviso">🔕 Os avisos estão bloqueados. Libere nas configurações do celular para saber quando chegar mensagem.</div>`;
+  if (!PUSH_OK && IOS && !INSTALADO) return `<div class="chat-aviso">📲 Para receber aviso de mensagem nova, instale o app na tela de início (Compartilhar › Adicionar à Tela de Início).</div>`;
+  if (!PUSH_OK) return "";
+  return `<div class="chat-aviso">🔔 Receba um aviso quando chegar mensagem nova.<button onclick="ativarAvisos()">Ativar avisos</button></div>`;
+}
+async function inscreverPush(clientes) {
+  const reg = await navigator.serviceWorker.ready;
+  let insc = await reg.pushManager.getSubscription();
+  if (!insc) {
+    const { chave } = await (await fetch(`${CHAT_CFG.servidor}/push/chave`)).json();
+    const b = Uint8Array.from(atob(chave.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+    insc = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b });
+  }
+  for (const c of clientes) {
+    await chatApi(`/push/inscrever?cliente=${encodeURIComponent(c)}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ inscricao: insc.toJSON() }) });
+  }
+}
+async function ativarAvisos() {
+  try {
+    const p = await Notification.requestPermission();
+    if (p !== "granted") { desenhar(); return; }
+    await inscreverPush(SELETOR ? (CHAT_RESUMO || []).map((c) => c.cliente) : [CLIENTE]);
+  } catch { alertaChat?.("Não foi possível ativar os avisos agora."); }
+  desenhar();
+}
+// renova a inscrição em silêncio (o endereço do aparelho pode mudar)
+function renovarPush() {
+  if (!CHAT_CFG || !PUSH_OK || Notification.permission !== "granted") return;
+  const lista = SELETOR ? (CHAT_RESUMO || []).map((c) => c.cliente) : CLIENTE ? [CLIENTE] : [];
+  if (lista.length) inscreverPush(lista).catch(() => {});
+}
+
+function telaChat() {
+  return `${blocoAvisos()}<p class="chat-aviso" id="chat-erro" hidden></p>
+    <div class="chat-lista" id="chat-lista"></div>
+    <div class="compositor"><div class="tela">
+      <button id="chat-cancelar" hidden aria-label="Cancelar gravação" onclick="cancelarGravacao()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <label id="chat-foto-bt" class="foto-bt"><input type="file" accept="image/*" hidden onchange="escolheuFoto(this)"><button type="button" aria-label="Enviar foto" onclick="this.previousElementSibling.click()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></button></label>
+      <textarea id="chat-texto" rows="1" placeholder="Mensagem" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px';estadoCompositor()"></textarea>
+      <span id="chat-tempo" class="tempo" hidden>0:00</span>
+      <button id="chat-audio" aria-label="Gravar áudio" onclick="alternarGravacao()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+      <button id="chat-enviar" class="enviar" hidden aria-label="Enviar" onclick="enviarTexto()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 20l18-8L3 4v6l12 2-12 2z"/></svg></button>
+    </div></div>`;
+}
+function enviarTexto() {
+  const c = document.getElementById("chat-texto");
+  const t = c.value.trim();
+  if (!t) return;
+  c.value = ""; c.style.height = "auto"; estadoCompositor();
+  enviarChat({ texto: t });
+}
+async function escolheuFoto(input) {
+  const arq = input.files?.[0];
+  input.value = "";
+  if (!arq) return;
+  const foto = await reduzirFoto(arq);
+  enviarChat({ arquivo: foto, nome: "foto.jpg" });
+}
+function ligarChat() {
+  if (aba !== "chat") return;
+  desenharMensagens(true);
+  estadoCompositor();
+  const c = document.getElementById("chat-texto");
+  c?.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !/iphone|android/i.test(navigator.userAgent)) { e.preventDefault(); enviarTexto(); } });
+  marcarLido();
+  marcarContadorChat();
+}
+
+// área do gestor: não lidas por cliente
+async function carregarResumoChat() {
+  if (!CHAT_CFG) return;
+  const r = await fetch(`${CHAT_CFG.servidor}/chat/resumo`, { headers: { "x-app-token": CHAT_CFG.token } }).catch(() => null);
+  if (r?.ok) CHAT_RESUMO = (await r.json()).clientes;
 }
 
 function desenhar() {
@@ -1194,7 +1511,7 @@ function desenhar() {
     document.querySelector(".topo h1").textContent = "Área do gestor";
     document.querySelector(".avatar").textContent = "VC";
     document.getElementById("atualizado").textContent = `${GESTOR_DADOS?.clientes.length || 0} clientes`;
-    document.getElementById("conteudo").innerHTML = telaSeletor() +
+    document.getElementById("conteudo").innerHTML = (CHAT_CFG ? blocoAvisos() : "") + telaSeletor() +
       `<div class="rodape"><img src="marca/logo-vc-96.png" alt="">Marketing Essencial · Studio Vitor Campos</div>` +
       `<button class="sair" onclick="sair()">Sair deste aparelho</button>`;
     return;
@@ -1202,15 +1519,19 @@ function desenhar() {
   desenharTopo();
   const EXTRAS = { config: telaConfig, cancelar: telaCancelar, avisos: telaAvisos, senha: telaSenha };
   const naConfig = aba in EXTRAS;
-  const tela = EXTRAS[aba] || (IMPLANTACAO ? telaImplantacao : TELAS[aba]);
+  if (aba === "chat" && !CHAT_CFG) aba = "resumo";
+  const naChat = aba === "chat";
+  const tela = EXTRAS[aba] || (naChat ? telaChat : IMPLANTACAO ? telaImplantacao : TELAS[aba]);
   if (IMPLANTACAO && !naConfig) document.querySelector(".redes").hidden = true;
-  document.querySelector(".periodos").hidden = naConfig || IMPLANTACAO;
-  if (naConfig) document.querySelector(".redes").hidden = true;
-  document.getElementById("conteudo").innerHTML = tela() +
-    `<div class="rodape"><img src="marca/logo-vc-96.png" alt="">Marketing Essencial · Studio Vitor Campos</div>` +
-    (NOTAS_REAIS && !GESTOR ? `<button class="sair" onclick="sair()">Sair deste aparelho</button>` : "");
+  document.querySelector(".periodos").hidden = naConfig || IMPLANTACAO || naChat;
+  if (naConfig || naChat) document.querySelector(".redes").hidden = true;
+  document.getElementById("conteudo").innerHTML = tela() + (naChat ? "" :
+    `<div class="rodape"><img src="marca/logo-vc-96.png" alt="">Marketing Essencial · Studio Vitor Campos</div>`) +
+    (NOTAS_REAIS && !GESTOR && !naChat ? `<button class="sair" onclick="sair()">Sair deste aparelho</button>` : "");
   ligarGrafico();
   atualizarSino();
+  ligarChat();
+  marcarContadorChat();
 }
 
 document.getElementById("atualizado").textContent =
@@ -1228,6 +1549,7 @@ document.querySelectorAll("nav button").forEach((b) => b.addEventListener("click
   document.querySelectorAll("nav button[aria-current]").forEach((x) => x.setAttribute("aria-current", "page"));
   window.scrollTo(0, 0);
   desenhar();
+  iniciarChatPolling();
 }));
 // App instalado que abre sem cliente (no iPhone o ícone pode ter sido adicionado
 // sem ?cliente= e o armazenamento do app começa vazio): em vez da demonstração,
@@ -1262,9 +1584,13 @@ function descobrirCliente() {
   });
 }
 if (!CLIENTE && !GESTOR && ABRIU_INSTALADO) descobrirCliente();
-else carregarReais().then(() => {
+else carregarReais().then(async () => {
   if (REDES.length === 1) rede = REDES[0];
+  if (aba === "chat") document.querySelectorAll("nav button").forEach((x) => x.toggleAttribute("aria-current", x.dataset.aba === "chat"));
+  await buscarChat();
   desenhar();
+  iniciarChatPolling();
+  renovarPush();
 });
 
 // ---------------------------------------------------------------- convite para instalar
