@@ -15,7 +15,7 @@
   if (p.has("gestor")) {
     // Área do gestor: app separado na tela do celular do Vitor (manifest-gestor.webmanifest)
     document.getElementById("manifesto").href = "manifest-gestor.webmanifest";
-    document.title = "ME Gestor";
+    document.title = "Studio · Gestor";
   } else if (c && /^[a-z0-9-]+$/.test(c)) {
     document.getElementById("manifesto").href = "manifest-" + c + (p.has("equipe") ? "-equipe" : "") + ".webmanifest";
   }
@@ -39,7 +39,7 @@ var MARCAS = { moranguinho: "Moranguinho" };
   document.title = MARCAS[c];
 })();
 if (new URLSearchParams(location.search).has("gestor")) {
-  document.querySelector('meta[name="apple-mobile-web-app-title"]').content = "ME Gestor";
+  document.querySelector('meta[name="apple-mobile-web-app-title"]').content = "Studio · Gestor";
   // ícone com as cores invertidas, para não confundir com o app do cliente
   document.querySelector('link[rel="apple-touch-icon"]').href = "icone-gestor-180.png";
   document.querySelector('link[rel="icon"]').href = "favicon-gestor-32.png";
