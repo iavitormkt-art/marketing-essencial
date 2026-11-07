@@ -451,6 +451,12 @@ html.gestor #porta .bt { background: #fff; color: #000; }
 #porta li svg * { stroke-width: 2; }
 #porta .obs { margin-top: 18px; font-size: 13px; color: rgba(255,255,255,.5); }
 #porta [hidden] { display: none !important; }
+#porta .progresso { margin-top: 28px; }
+#porta .trilho { height: 6px; border-radius: 3px; background: rgba(255,255,255,.14); overflow: hidden; }
+#porta .barra { height: 100%; width: 0; border-radius: 3px; background: #00fff9; transition: width .4s ease; }
+html.gestor #porta .barra { background: #fff; }
+#porta .progresso p { margin-top: 12px; font-size: 14px; }
+#porta .progresso b { color: #fff; }
 @keyframes ab-traca { to { stroke-dashoffset: 0; } }
 @keyframes ab-gira { from { transform: rotate(-120deg) scale(.86); } to { transform: none; } }
 @keyframes ab-nome { from { opacity: 0; letter-spacing: .45em; } to { opacity: 1; letter-spacing: .3em; } }
@@ -487,6 +493,10 @@ html.gestor #porta .bt { background: #fff; color: #000; }
     <h1 id="porta-titulo">Instale o app</h1>
     <p id="porta-texto">O acompanhamento funciona como um app no seu celular. Instale para entrar.</p>
     <button class="bt" type="button" id="porta-instalar" hidden>Instalar app</button>
+    <div class="progresso" id="porta-progresso" hidden>
+      <div class="trilho"><div class="barra" id="porta-barra"></div></div>
+      <p><b id="porta-pct">0%</b> · Instalando… não feche esta tela</p>
+    </div>
     <ol id="porta-ios" hidden>
       <li><span>Toque em <b>Compartilhar</b></span><svg viewBox="0 0 24 24" aria-label="ícone Compartilhar"><path d="M12 3v12M8 7l4-4 4 4M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg></li>
       <li><span>Escolha <b>Adicionar à Tela de Início</b></span></li>
@@ -532,12 +542,32 @@ html.gestor #porta .bt { background: #fff; color: #000; }
   bt.addEventListener("click", function () {
     if (!pedido) { document.getElementById("porta-android").hidden = false; return; }
     pedido.prompt();
-    pedido.userChoice.then(function (r) { if (r.outcome === "accepted") { bt.hidden = true; } pedido = null; });
+    pedido.userChoice.then(function (r) { if (r.outcome === "accepted") { bt.hidden = true; progresso(); } pedido = null; });
   });
+  // Barra de progresso enquanto o Android instala em segundo plano (o navegador não informa a %,
+  // então ela avança até 90% e completa quando a instalação termina)
+  var timer = null, pct = 0, pronto = false;
+  function mostrarPct(v) { document.getElementById("porta-barra").style.width = v + "%"; document.getElementById("porta-pct").textContent = Math.round(v) + "%"; }
+  function progresso() {
+    if (pronto) return;
+    document.getElementById("porta-progresso").hidden = false;
+    document.getElementById("porta-obs").hidden = true; document.getElementById("porta-android").hidden = true;
+    document.getElementById("porta-titulo").textContent = "Instalando o app";
+    document.getElementById("porta-texto").textContent = "Leva alguns segundos. Fique nesta tela até terminar.";
+    timer = setInterval(function () { pct += (90 - pct) * 0.08; mostrarPct(pct); }, 300);
+    setTimeout(concluir, 45000); // se o aviso de "instalado" não vier, conclui assim mesmo
+  }
+  function concluir() {
+    if (pronto) return; pronto = true; clearInterval(timer); mostrarPct(100);
+    setTimeout(function () {
+      document.getElementById("porta-progresso").hidden = true;
+      document.getElementById("porta-titulo").textContent = "App instalado ✓";
+      document.getElementById("porta-texto").textContent = "Agora é só abrir pelo ícone na tela do seu celular.";
+    }, 600);
+  }
   addEventListener("appinstalled", function () {
+    concluir();
     bt.hidden = true; document.getElementById("porta-android").hidden = true; document.getElementById("porta-obs").hidden = true;
-    document.getElementById("porta-titulo").textContent = "App instalado ✓";
-    document.getElementById("porta-texto").textContent = "Agora é só abrir pelo ícone na tela do seu celular.";
   });
 })();
 </script>
