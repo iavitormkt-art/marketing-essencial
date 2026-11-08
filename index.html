@@ -291,6 +291,8 @@ nav button .contador-nav { position: absolute; top: 0; right: 8px; min-width: 17
 .galeria button.fora img { opacity: .45; filter: grayscale(1); }
 .galeria button.fora .x { display: grid; }
 .galeria-barra { position: sticky; bottom: calc(66px + env(safe-area-inset-bottom)); margin-top: 14px; background: var(--cartao); border-radius: 14px; box-shadow: var(--sombra); padding: 12px 14px; display: flex; gap: 10px; align-items: center; }
+.aj-lista { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
+.aj-lista li { margin: 3px 0; }
 .galeria-barra span { flex: 1; font-size: 13.5px; color: var(--texto-2); }
 .botao-galeria { display: inline-block; margin-top: 6px; border: 0; border-radius: 10px; padding: 9px 14px; font: inherit; font-weight: 700; background: var(--marca); color: var(--sobre-marca); cursor: pointer; }
 .galeria .aj { position: absolute; right: 4px; top: 4px; background: #ffc94d; color: #3f2524; font-size: 11px; font-weight: 800; padding: 1px 6px; border-radius: 8px; }
@@ -773,7 +775,7 @@ const ULTIMO = (() => { try { return JSON.parse(localStorage.getItem("me-ultimo"
 const GESTOR = PARAMS.has("gestor");
 let GESTOR_DADOS = null; // {clientes: [{id, nome, senha}]}, do cofre dados/gestor.enc.json
 const CONVERSA = PARAMS.has("gestor") && PARAMS.has("conversa"); // conversa aberta a partir da lista
-const VER_GESTOR = PARAMS.get("ver") === "clientes" ? "clientes" : "conversas";
+const VER_GESTOR = ["clientes", "aprovacoes"].includes(PARAMS.get("ver")) ? PARAMS.get("ver") : "conversas";
 if (CONVERSA) document.body.classList.add("conversa");
 let SELETOR = false;     // área do gestor sem cliente escolhido: lista de clientes
 const CLIENTE = GESTOR ? PARAMS.get("cliente") : PARAMS.get("cliente") || ULTIMO?.cliente || null;
@@ -911,6 +913,7 @@ function abasGestor() {
   const novas = (CHAT_RESUMO || []).reduce((s, r) => s + (r.naoLidas || 0), 0);
   return `<div class="abas-gestor" role="tablist">
     <a href="./?gestor" aria-current="${VER_GESTOR === "conversas"}">Conversas${novas ? `<span class="n">${novas}</span>` : ""}</a>
+    <a href="./?gestor&ver=aprovacoes" aria-current="${VER_GESTOR === "aprovacoes"}">Aprovações${APROV_GESTOR?.some((x) => !x.resp) ? `<span class="n">${APROV_GESTOR.filter((x) => !x.resp).length}</span>` : ""}</a>
     <a href="./?gestor&ver=clientes" aria-current="${VER_GESTOR === "clientes"}">Clientes</a></div>`;
 }
 // Cada cliente com Conversa ligada é um contato; a mais recente fica em cima.
@@ -925,6 +928,29 @@ function telaConversas() {
       <div class="meio"><b>${esc(c.nome || c.id)}</b><span class="sub"><span class="ultima">${esc(previaMsg(r.ultima) || "Toque para começar a conversa")}</span></span></div>
       <div class="lado"><span class="hora">${horaCurta(r.ultima?.em)}</span>${r.naoLidas ? `<span class="naolidas">${r.naoLidas}</span>` : ""}</div></a>`).join("")
     || `<p class="vazio">Nenhum cliente com a Conversa ligada ainda.</p>`}</div></section>`;
+}
+// Aprovações de todos os clientes: o que foi enviado (galeria/<id>.json) e a resposta (Conversa)
+let APROV_GESTOR = null; // [{c, a, resp}]
+async function carregarAprovGestor() {
+  const lista = [];
+  for (const c of GESTOR_DADOS?.clientes || []) {
+    const g = await fetch(`galeria/${encodeURIComponent(c.id)}.json`, { cache: "no-cache" }).then((r) => r.ok ? r.json() : null).catch(() => null);
+    if (!g) continue;
+    const aprovs = g.aprovacoes || [{ id: "fotos", titulo: g.titulo || "Fotos para as redes", itens: g.itens || [] }];
+    const msgs = CHAT_CFG ? await fetch(`${CHAT_CFG.servidor}/chat?cliente=${encodeURIComponent(c.id)}&depois=0`, { headers: { "x-app-token": CHAT_CFG.token } })
+      .then((r) => r.ok ? r.json() : { msgs: [] }).then((d) => d.msgs || []).catch(() => []) : [];
+    aprovs.forEach((a) => lista.push({ c, a, resp: respostaAprov(a, msgs) }));
+  }
+  APROV_GESTOR = lista.sort((x, y) => (!!x.resp - !!y.resp) || (y.resp?.em || "").localeCompare(x.resp?.em || ""));
+}
+function telaAprovGestor() {
+  if (!APROV_GESTOR) return `<section><div class="cartao vazio">Carregando…</div></section>`;
+  if (!APROV_GESTOR.length) return `<section><div class="cartao vazio">Nenhuma aprovação enviada aos clientes.</div></section>`;
+  return `<section><div class="cartao">${APROV_GESTOR.map(({ c, a, resp }) => {
+    const nAj = resp ? Object.keys(resp.ajustes).length : 0;
+    const det = resp ? `✓ ${quandoResp(resp.em)} · ${a.itens.length - resp.fora.size} aprovadas · ${resp.fora.size} não usar · ${nAj} ajuste${nAj === 1 ? "" : "s"}` : `⏳ Aguardando · ${a.itens.length} peças`;
+    return `<a class="cliente-item conversa-item${resp ? "" : " tem-nova"}" href="./?gestor&cliente=${encodeURIComponent(c.id)}&aba=galeria&aprov=${encodeURIComponent(a.id)}">
+      ${avatarCliente(c)}<div class="meio"><b>${esc(a.titulo)}</b><span class="sub"><span class="ultima">${esc(c.nome || c.id)} · ${det}</span></span></div></a>`; }).join("")}</div></section>`;
 }
 function telaSeletor() {
   const lista = GESTOR_DADOS?.clientes || [];
@@ -948,7 +974,7 @@ async function carregarReais() {
     try { GESTOR_DADOS = await abrirGestor(); } catch { GESTOR_DADOS = { clientes: [] }; }
     CHAT_CFG = GESTOR_DADOS.chat || null;
     if (PARAMS.get("cliente") === null) {
-      SELETOR = true; document.body.classList.add("seletor"); await carregarResumoChat();
+      SELETOR = true; document.body.classList.add("seletor"); await carregarResumoChat(); carregarAprovGestor().then(desenhar);
       // lista de conversas sempre atual: confere a cada 10 s (e quando o app volta para a tela)
       const totalNovas = () => (CHAT_RESUMO || []).reduce((s, r) => s + (r.naoLidas || 0), 0);
       const atualizarLista = async () => {
@@ -1015,7 +1041,8 @@ const PASSOS = [
 
 // ---------------------------------------------------------------- estado
 let periodo = "dia";
-let aba = new URLSearchParams(location.search).get("aba") === "chat" || CONVERSA ? "chat" : "resumo";
+const ABA_URL = new URLSearchParams(location.search).get("aba");
+let aba = ABA_URL === "chat" || CONVERSA ? "chat" : ABA_URL === "galeria" ? "galeria" : "resumo";
 let rede = "ambos";
 
 const NOME_REDE = { instagram: "Instagram", facebook: "Facebook" };
@@ -1491,7 +1518,7 @@ function lerTodas() { MSGS.forEach((m) => LIDOS.add(m.id)); gravarLidos(); desen
 // O cliente vê em grade, abre em tela cheia passando para o lado, marca o que NÃO quer
 // e pode pedir ajuste em cada peça. A escolha vai como mensagem na Conversa.
 // Cada aprovação aparece em destaque no Resumo até o cliente enviar.
-let APROVACOES = null, GAL_ATUAL = null, GAL_EXISTE = false, GAL_ENVIADA = false;
+let APROVACOES = null, GAL_ATUAL = PARAMS.get("aprov"), GAL_EXISTE = false, GAL_ENVIADA = false;
 const galChave = (id, k) => `me-aprov-${CLIENTE}-${id}-${k}`;
 const galLer = (id, k, padrao) => { try { return JSON.parse(localStorage.getItem(galChave(id, k))) ?? padrao; } catch { return padrao; } };
 const galGravar = (id, k, v) => { try { localStorage.setItem(galChave(id, k), JSON.stringify(v)); } catch { /* */ } };
@@ -1506,9 +1533,21 @@ function conferirGaleria() {
   if (!CLIENTE) return;
   carregarAprovacoes().then((l) => { GAL_EXISTE = l.length > 0; if (GAL_EXISTE && aba === "resumo") desenhar(); });
 }
+// Resposta do cliente (vem pela Conversa): a última mensagem dele que começa com "<título>:"
+function respostaAprov(a, msgs = CHAT_MSGS) {
+  const m = [...msgs].reverse().find((x) => x.de === "cliente" && (x.texto || "").startsWith(`${a.titulo}:`));
+  if (!m) return null;
+  const fora = new Set(((m.texto.match(/NÃO usar: ([\d, ]+)/) || [])[1] || "").split(",").map((t) => +t.trim()).filter(Boolean));
+  const ajustes = {};
+  m.texto.split("\n").forEach((l) => { const r = l.match(/^• (\d+): (.+)$/); if (r) ajustes[r[1]] = r[2]; });
+  return { em: m.em, fora, ajustes };
+}
+const estadoAprov = (a) => GESTOR ? (respostaAprov(a) || { fora: new Set(), ajustes: {} })
+  : { fora: new Set(galLer(a.id, "fora", [])), ajustes: galLer(a.id, "ajustes", {}) };
+const quandoResp = (iso) => new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 const galPendentes = () => (APROVACOES || []).filter((a) => GESTOR || !galLer(a.id, "enviada", false));
 const atalhoGaleria = () => galPendentes().map((a) => `<section><a class="cartao marco-chamada aprov-destaque" href="#" onclick="abrirAprovacao('${esc(a.id)}');return false">
-    <p><b>${a.itens.some((i) => i.texto) ? "📣" : "📷"} ${esc(a.chamada || a.titulo)}</b></p><span>Toque para ver e aprovar →</span></a></section>`).join("");
+    <p><b>${a.itens.some((i) => i.texto) ? "📣" : "📷"} ${esc(a.chamada || a.titulo)}</b></p><span>${GESTOR ? (respostaAprov(a) ? `✓ Respondida em ${quandoResp(respostaAprov(a).em)} · ver →` : "⏳ Aguardando o cliente · ver →") : "Toque para ver e aprovar →"}</span></a></section>`).join("");
 function abrirAprovacao(id) { GAL_ATUAL = id; GAL_ENVIADA = false; irAba("galeria"); }
 const aprovAtual = () => (APROVACOES || []).find((a) => a.id === GAL_ATUAL) || (APROVACOES || [])[0];
 const imgAprov = (a, n) => `galeria/${encodeURIComponent(CLIENTE)}/${a.antiga ? "" : encodeURIComponent(a.id) + "/"}${String(n).padStart(3, "0")}.jpg`;
@@ -1525,16 +1564,21 @@ function telaGaleria() {
   if (!APROVACOES) { carregarAprovacoes().then(() => aba === "galeria" && desenhar()); return `<section><div class="cartao vazio">Carregando…</div></section>`; }
   const a = aprovAtual();
   if (!a) return `<section><div class="cartao vazio">Nada para aprovar agora.</div></section>`;
-  const fora = new Set(galLer(a.id, "fora", [])), ajustes = galLer(a.id, "ajustes", {});
+  if (GESTOR && CHAT_CFG && !CHAT_PRONTO) buscarChat().then(() => aba === "galeria" && desenhar());
+  const { fora, ajustes } = estadoAprov(a), resp = GESTOR ? respostaAprov(a) : null;
   const nAjustes = Object.values(ajustes).filter((v) => v.trim()).length;
+  const listaAj = Object.entries(ajustes).filter(([, v]) => v.trim());
+  const cabeca = !GESTOR ? `<p>Toque para ver grande e passar para o lado. Em cada uma você pode marcar <b>não usar</b> ou <b>pedir ajuste</b>. No fim, toque em <b>Enviar</b>.</p>`
+    : resp ? `<p><b>✓ Respondida em ${quandoResp(resp.em)}</b></p><p>${a.itens.length - fora.size} aprovadas · ${fora.size} não usar${fora.size ? ` (${[...fora].sort((x, y) => x - y).join(", ")})` : ""} · ${nAjustes} ajuste${nAjustes === 1 ? "" : "s"}</p>${listaAj.length ? `<ul class="aj-lista">${listaAj.map(([n, v]) => `<li><b>${n}:</b> ${esc(v)}</li>`).join("")}</ul>` : ""}`
+    : `<p><b>⏳ Aguardando o cliente</b></p><p>${a.itens.length} peças enviadas para aprovação. Quando ele responder, as marcações aparecem aqui.</p>`;
   const grupos = [...new Set(a.itens.map((i) => i.grupo))];
   return `<button class="voltar-app" onclick="irAba('resumo')">← Voltar</button>
-    <section><h2>${esc(a.titulo)}</h2><div class="cartao"><p>Toque para ver grande e passar para o lado. Em cada uma você pode marcar <b>não usar</b> ou <b>pedir ajuste</b>. No fim, toque em <b>Enviar</b>.</p></div></section>
+    <section><h2>${esc(a.titulo)}</h2><div class="cartao">${cabeca}</div></section>
     ${grupos.map((g) => `<section>${g ? `<h2>${esc(g)}</h2>` : ""}<div class="galeria">${a.itens.filter((i) => i.grupo === g).map((i) => `
       <button class="${fora.has(i.n) ? "fora" : ""}" onclick="verFoto(${i.n})" aria-label="Peça ${i.n}${fora.has(i.n) ? ", não usar" : ""}">
         <img loading="lazy" src="${imgAprov(a, i.n)}" alt=""><span class="n">${i.n}</span>${ajustes[i.n]?.trim() ? `<span class="aj">✎</span>` : ""}<span class="x">✕</span></button>`).join("")}</div></section>`).join("")}
-    <div class="galeria-barra"><span>${GAL_ENVIADA ? "Enviado pela Conversa ✓" : `${fora.size} para não usar · ${nAjustes} ajuste${nAjustes === 1 ? "" : "s"}`}</span>
-      <button class="botao-galeria" onclick="enviarGaleria()">${GAL_ENVIADA ? "Enviar de novo" : "Enviar"}</button></div>`;
+    ${GESTOR ? "" : `<div class="galeria-barra"><span>${GAL_ENVIADA ? "Enviado pela Conversa ✓" : `${fora.size} para não usar · ${nAjustes} ajuste${nAjustes === 1 ? "" : "s"}`}</span>
+      <button class="botao-galeria" onclick="enviarGaleria()">${GAL_ENVIADA ? "Enviar de novo" : "Enviar"}</button></div>`}`;
 }
 // Visualizador em tela cheia: passa para o lado (dedo ou setas), marca e pede ajuste
 function verFoto(n) {
@@ -1542,17 +1586,18 @@ function verFoto(n) {
   const v = document.createElement("div"); v.className = "visor"; document.body.appendChild(v);
   const fechar = () => { v.remove(); desenhar(); };
   const pintar = () => {
-    const it = lista[i], fora = new Set(galLer(a.id, "fora", [])), ajustes = galLer(a.id, "ajustes", {});
+    const it = lista[i], { fora, ajustes } = estadoAprov(a);
     v.innerHTML = `<div class="visor-topo"><span>${i + 1} de ${lista.length}${it.grupo ? ` · ${esc(it.grupo)}` : ""}</span><button class="fechar" aria-label="Fechar">✕</button></div>
       <div class="visor-foto"><button class="seta esq" aria-label="Anterior" ${i ? "" : "hidden"}>‹</button>
         <img src="${imgAprov(a, it.n)}" alt="Peça ${it.n}" class="${fora.has(it.n) ? "fora" : ""}">
         <button class="seta dir" aria-label="Próxima" ${i < lista.length - 1 ? "" : "hidden"}>›</button></div>
       ${it.texto ? `<div class="visor-texto">${esc(it.texto).replace(/\n/g, "<br>")}</div>` : ""}
-      <div class="visor-acoes">
+      ${GESTOR ? `<div class="visor-texto">${fora.has(it.n) ? "✕ <b>Não usar</b>" : "✓ Aprovada"}${ajustes[it.n]?.trim() ? `<br>✎ Ajuste: ${esc(ajustes[it.n])}` : ""}</div>` : ""}
+      <div class="visor-acoes" ${GESTOR ? "hidden" : ""}>
         <button class="usar ${fora.has(it.n) ? "" : "ativo"}">✓ Usar</button>
         <button class="nao ${fora.has(it.n) ? "ativo" : ""}">✕ Não usar</button>
         <button class="ajuste">✎ ${ajustes[it.n]?.trim() ? "Editar ajuste" : "Pedir ajuste"}</button></div>
-      <textarea class="visor-ajuste" placeholder="O que você quer mudar nesta peça?" ${ajustes[it.n]?.trim() ? "" : "hidden"}>${esc(ajustes[it.n] || "")}</textarea>`;
+      <textarea class="visor-ajuste" placeholder="O que você quer mudar nesta peça?" ${ajustes[it.n]?.trim() && !GESTOR ? "" : "hidden"}>${esc(ajustes[it.n] || "")}</textarea>`;
     v.querySelector(".fechar").onclick = fechar;
     v.querySelector(".esq").onclick = () => { if (i > 0) { i--; pintar(); } };
     v.querySelector(".dir").onclick = () => { if (i < lista.length - 1) { i++; pintar(); } };
@@ -1988,7 +2033,7 @@ function desenhar() {
     document.querySelector(".avatar").textContent = "VC";
     document.getElementById("atualizado").textContent = `${GESTOR_DADOS?.clientes.length || 0} clientes`;
     document.getElementById("conteudo").innerHTML = abasGestor() + (CHAT_CFG && VER_GESTOR === "conversas" ? blocoAvisos() : "") +
-      (VER_GESTOR === "conversas" ? telaConversas() : telaSeletor()) +
+      (VER_GESTOR === "conversas" ? telaConversas() : VER_GESTOR === "aprovacoes" ? telaAprovGestor() : telaSeletor()) +
       `<div class="rodape"><img src="marca/logo-vc-96.png" alt="">Marketing Essencial · Studio Vitor Campos</div>` +
       `<button class="sair" onclick="sair()">Sair deste aparelho</button>`;
     return;
