@@ -256,6 +256,26 @@ nav button .contador-nav { position: absolute; top: 0; right: 8px; min-width: 17
 .bolha img { display: block; max-width: 100%; border-radius: 10px; margin: 2px 0 4px; min-height: 80px; background: var(--marca-suave); cursor: zoom-in; }
 .bolha audio { width: 230px; max-width: 100%; height: 40px; display: block; margin: 2px 0; }
 .bolha.enviando { opacity: .6; }
+/* responder (citação) e reações, como no WhatsApp */
+.bolha { position: relative; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; transition: transform .12s; }
+.bolha .citacao { border-left: 4px solid var(--marca); background: rgba(127, 127, 127, .14); border-radius: 8px; padding: 5px 8px; margin: 0 0 5px; font-size: 13px; line-height: 1.3; cursor: pointer; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.bolha.minha .citacao { border-left-color: var(--sobre-marca); background: rgba(255, 255, 255, .18); }
+.bolha .citacao b { display: block; font-size: 12.5px; }
+.bolha .reacoes { position: absolute; bottom: -13px; right: 10px; background: var(--cartao); color: var(--texto); border-radius: 12px; box-shadow: 0 1px 4px rgba(0, 0, 0, .2); padding: 1px 6px; font-size: 14px; line-height: 22px; cursor: pointer; }
+.bolha.dele .reacoes { right: auto; left: 10px; }
+.bolha.tem-reacao { margin-bottom: 12px; }
+.bolha.destacada { animation: destaque 1.2s; }
+@keyframes destaque { 30% { box-shadow: 0 0 0 4px var(--marca-suave); } }
+.menu-reacao { position: fixed; z-index: 30; background: var(--cartao); border-radius: 24px; box-shadow: 0 8px 28px rgba(0, 30, 45, .28); padding: 6px 8px; display: flex; align-items: center; gap: 2px; }
+.menu-reacao button { border: 0; background: none; font-size: 26px; line-height: 1; padding: 6px; border-radius: 50%; cursor: pointer; }
+.menu-reacao button.escolhida { background: var(--marca-suave); }
+.menu-reacao button.responder { font-size: 14px; font-weight: 700; color: var(--marca); border-radius: 14px; padding: 8px 10px; display: flex; gap: 4px; align-items: center; }
+.menu-reacao button.responder svg { width: 18px; height: 18px; }
+.fundo-menu-reacao { position: fixed; inset: 0; z-index: 29; }
+.compositor .respondendo { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 6px 10px; border-left: 4px solid var(--marca); background: var(--cartao); border-radius: 10px; font-size: 13px; }
+.compositor .respondendo div { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.compositor .respondendo b { display: block; font-size: 12.5px; color: var(--marca); }
+.compositor .respondendo button { width: 30px; height: 30px; background: none; color: var(--texto-3); }
 .compositor { position: fixed; left: 0; right: 0; bottom: calc(62px + env(safe-area-inset-bottom)); z-index: 6; background: var(--fundo); border-top: 1px solid var(--linha); padding: 8px 0; }
 .compositor .tela { display: flex; align-items: flex-end; gap: 8px; }
 .compositor textarea { flex: 1; resize: none; font: inherit; font-size: 16px; border: 1px solid var(--linha); border-radius: 20px; padding: 9px 14px; max-height: 120px; background: var(--cartao); color: var(--texto); }
@@ -1697,7 +1717,9 @@ let CHAT_CFG = null;        // {token, servidor}
 let CHAT_MSGS = [];         // mensagens já carregadas
 let CHAT_LIDOS = {};        // {cliente: id, studio: id}
 let CHAT_TIMER = null;
-let CHAT_PRONTO = false;     // depois da 1ª carga: só mensagem nova de verdade toca o som
+let CHAT_PRONTO = false;
+let CHAT_REACOES = [];       // [{msg, papel, emoji}]
+let CHAT_RESP = null;        // id da mensagem que está sendo respondida     // depois da 1ª carga: só mensagem nova de verdade toca o som
 
 // Som do Studio (assinatura sonora) quando chega mensagem com o app aberto.
 // Celulares só deixam tocar som depois de um toque na tela: o 1º toque "destrava".
@@ -1759,6 +1781,10 @@ async function buscarChat() {
   if (!r?.ok) return;
   const d = await r.json();
   CHAT_LIDOS = d.lidos || {};
+  if (d.reacoes && JSON.stringify(d.reacoes) !== JSON.stringify(CHAT_REACOES)) {
+    CHAT_REACOES = d.reacoes;
+    if (aba === "chat") desenharMensagens(false);
+  }
   const novas = d.msgs.filter((m) => !CHAT_MSGS.some((x) => x.id === m.id));
   if (novas.length) {
     CHAT_MSGS.push(...novas);
@@ -1799,7 +1825,85 @@ function bolha(m) {
     .replace(/\[galeria\]/gi, `<button class="botao-galeria" onclick="irAba('galeria')">Abrir a galeria de fotos</button>`) : "";
   const outro = EU() === "studio" ? "cliente" : "studio";
   const visto = minha && !m.enviando && (CHAT_LIDOS[outro] || 0) >= m.id ? " · lida" : "";
-  return `<div class="bolha ${minha ? "minha" : "dele"}${m.enviando ? " enviando" : ""}" data-id="${m.id}">${corpo}${texto}<span class="hora">${m.enviando ? "enviando…" : hhmm(m.em) + visto}</span></div>`;
+  const cit = m.resposta ? CHAT_MSGS.find((x) => x.id === m.resposta) : null;
+  const citacao = m.resposta ? `<span class="citacao" onclick="irParaMsg(${m.resposta});event.stopPropagation()"><b>${esc(cit ? autorChat(cit.de) : "Mensagem")}</b>${esc(cit ? resumoMsg(cit) : "mensagem anterior")}</span>` : "";
+  const reac = CHAT_REACOES.filter((r) => r.msg === m.id).map((r) => r.emoji);
+  const pilula = reac.length ? `<span class="reacoes" onclick="abrirMenuReacao(${m.id});event.stopPropagation()">${reac.map(esc).join("")}${reac.length > 1 ? " " + reac.length : ""}</span>` : "";
+  return `<div class="bolha ${minha ? "minha" : "dele"}${m.enviando ? " enviando" : ""}${reac.length ? " tem-reacao" : ""}" data-id="${m.id}">${citacao}${corpo}${texto}<span class="hora">${m.enviando ? "enviando…" : hhmm(m.em) + visto}</span>${pilula}</div>`;
+}
+const autorChat = (de) => de === EU() ? "Você" : de === "studio" ? "Studio Vitor Campos" : (NOME_CLIENTE || GESTOR_DADOS?.clientes?.find((c) => c.id === CLIENTE)?.nome || "Cliente");
+const resumoMsg = (m) => m.tipo === "foto" ? "📷 Foto" : m.tipo === "audio" ? "🎤 Áudio" : m.tipo === "video" ? "🎬 Vídeo" : m.tipo === "arquivo" ? `📎 ${m.nome || "Arquivo"}` : (m.texto || "").slice(0, 160);
+function irParaMsg(id) {
+  const el = document.querySelector(`.bolha[data-id="${id}"]`);
+  if (!el) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  el.classList.remove("destacada"); void el.offsetWidth; el.classList.add("destacada");
+}
+// segurar a mensagem (ou clique direito / duplo clique): reações + Responder; arrastar para a direita: Responder
+const EMOJIS_REACAO = ["👍", "❤️", "😂", "😮", "🙏", "👏"];
+function abrirMenuReacao(id) {
+  fecharMenuReacao();
+  const el = document.querySelector(`.bolha[data-id="${id}"]`);
+  if (!el || id >= 1e12) return;
+  const minha = CHAT_REACOES.find((r) => r.msg === id && r.papel === EU())?.emoji;
+  const fundo = document.createElement("div"); fundo.className = "fundo-menu-reacao"; fundo.onclick = fecharMenuReacao;
+  const menu = document.createElement("div"); menu.className = "menu-reacao";
+  menu.innerHTML = EMOJIS_REACAO.map((e, i) => `<button class="${e === minha ? "escolhida" : ""}" onclick="reagirMsg(${id}, ${i})">${e}</button>`).join("")
+    + `<button class="responder" onclick="responderMsg(${id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 9V5l-7 7 7 7v-4c5 0 8.5 1.5 11 5-1-5-4-10-11-11z"/></svg>Responder</button>`;
+  document.body.append(fundo, menu);
+  const r = el.getBoundingClientRect(), w = menu.offsetWidth, h = menu.offsetHeight;
+  menu.style.left = Math.max(8, Math.min(innerWidth - w - 8, el.classList.contains("minha") ? r.right - w : r.left)) + "px";
+  menu.style.top = (r.top - h - 8 < 8 ? r.bottom + 8 : r.top - h - 8) + "px";
+  navigator.vibrate?.(15);
+}
+function fecharMenuReacao() { document.querySelectorAll(".menu-reacao, .fundo-menu-reacao").forEach((x) => x.remove()); }
+async function reagirMsg(id, i) {
+  fecharMenuReacao();
+  const emoji = EMOJIS_REACAO[i];
+  const atual = CHAT_REACOES.find((r) => r.msg === id && r.papel === EU());
+  const novo = atual?.emoji === emoji ? "" : emoji; // tocar no mesmo emoji tira a reação
+  CHAT_REACOES = CHAT_REACOES.filter((r) => !(r.msg === id && r.papel === EU()));
+  if (novo) CHAT_REACOES.push({ msg: id, papel: EU(), emoji: novo });
+  desenharMensagens(false);
+  const r = await chatApi(`/chat/reagir?${chatQ()}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, emoji: novo }) }).catch(() => null);
+  if (!r?.ok) alertaChat("Não foi possível reagir agora. Confira a internet.");
+}
+function responderMsg(id) {
+  fecharMenuReacao();
+  CHAT_RESP = id;
+  barraResposta();
+  document.getElementById("chat-texto")?.focus();
+}
+function cancelarResposta() { CHAT_RESP = null; barraResposta(); }
+function barraResposta() {
+  const b = document.getElementById("chat-respondendo");
+  if (!b) return;
+  const m = CHAT_RESP && CHAT_MSGS.find((x) => x.id === CHAT_RESP);
+  b.hidden = !m;
+  b.innerHTML = m ? `<div><b>Respondendo a ${esc(autorChat(m.de))}</b>${esc(resumoMsg(m))}</div><button aria-label="Cancelar resposta" onclick="cancelarResposta()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>` : "";
+}
+function gestosBolhas() {
+  document.querySelectorAll("#chat-lista .bolha").forEach((el) => {
+    const id = Number(el.dataset.id);
+    if (id >= 1e12) return;
+    let x0 = 0, y0 = 0, dx = 0, longo = null;
+    el.oncontextmenu = (e) => { e.preventDefault(); abrirMenuReacao(id); };
+    el.ondblclick = () => abrirMenuReacao(id);
+    el.addEventListener("touchstart", (e) => {
+      const p = e.touches[0]; x0 = p.clientX; y0 = p.clientY; dx = 0;
+      longo = setTimeout(() => { longo = null; abrirMenuReacao(id); }, 450);
+    }, { passive: true });
+    el.addEventListener("touchmove", (e) => {
+      const p = e.touches[0]; const mx = p.clientX - x0, my = p.clientY - y0;
+      if (Math.abs(mx) > 8 || Math.abs(my) > 8) { clearTimeout(longo); longo = null; }
+      if (mx > 0 && Math.abs(mx) > Math.abs(my)) { dx = Math.min(mx, 90); el.style.transform = `translateX(${dx}px)`; }
+    }, { passive: true });
+    el.addEventListener("touchend", () => {
+      clearTimeout(longo); longo = null;
+      el.style.transform = "";
+      if (dx > 60) responderMsg(id);
+    });
+  });
 }
 function desenharMensagens(rolar) {
   const lista = document.getElementById("chat-lista");
@@ -1814,6 +1918,8 @@ function desenharMensagens(rolar) {
   lista.innerHTML = html || `<div class="cartao vazio">${GESTOR ? "Nenhuma mensagem ainda. Escreva para o cliente por aqui." :
     "Fale com o Studio por aqui: pedidos, dúvidas, fotos de produtos e áudios. A gente responde no horário comercial."}</div>`;
   carregarMidias();
+  gestosBolhas();
+  barraResposta();
   if (rolar || perto) requestAnimationFrame(() => scrollTo(0, document.body.scrollHeight));
 }
 async function carregarMidias() {
@@ -1831,7 +1937,9 @@ async function carregarMidias() {
 }
 
 async function enviarChat(dados) {
-  const temp = { id: 1e12 + Date.now(), de: EU(), texto: dados.texto || "", tipo: dados.arquivo ? (/^image/.test(dados.arquivo.type) ? "foto" : /^audio/.test(dados.arquivo.type) ? "audio" : /^video/.test(dados.arquivo.type) ? "video" : "arquivo") : "texto", nome: dados.nome, em: new Date().toISOString(), enviando: true };
+  if (dados.resposta === undefined && CHAT_RESP) dados.resposta = CHAT_RESP;
+  CHAT_RESP = null;
+  const temp = { id: 1e12 + Date.now(), de: EU(), resposta: dados.resposta || null, texto: dados.texto || "", tipo: dados.arquivo ? (/^image/.test(dados.arquivo.type) ? "foto" : /^audio/.test(dados.arquivo.type) ? "audio" : /^video/.test(dados.arquivo.type) ? "video" : "arquivo") : "texto", nome: dados.nome, em: new Date().toISOString(), enviando: true };
   if (dados.arquivo) CHAT_MIDIAS.set(temp.id, URL.createObjectURL(dados.arquivo));
   CHAT_MSGS.push(temp);
   desenharMensagens(true);
@@ -1842,9 +1950,10 @@ async function enviarChat(dados) {
       f.append("arquivo", dados.arquivo, dados.nome || "arquivo");
       if (dados.texto) f.append("texto", dados.texto);
       if (dados.duracao) f.append("duracao", String(dados.duracao));
+      if (dados.resposta) f.append("resposta", String(dados.resposta));
       r = await chatApi(`/chat?${chatQ()}`, { method: "POST", body: f });
     } else {
-      r = await chatApi(`/chat?${chatQ()}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ texto: dados.texto }) });
+      r = await chatApi(`/chat?${chatQ()}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ texto: dados.texto, resposta: dados.resposta || null }) });
     }
     const j = await r.json();
     if (!r.ok) throw new Error(j.erro || "falhou");
@@ -1969,7 +2078,7 @@ function renovarPush() {
 function telaChat() {
   return `${blocoAvisos()}<p class="chat-aviso" id="chat-erro" hidden></p>
     <div class="chat-lista" id="chat-lista"></div>
-    <div class="compositor"><div class="tela">
+    <div class="compositor"><div class="tela respondendo" id="chat-respondendo" hidden></div><div class="tela">
       <button id="chat-cancelar" hidden aria-label="Cancelar gravação" onclick="cancelarGravacao()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       <div id="chat-foto-bt" class="mais-bt">
         <button type="button" aria-label="Anexar" aria-expanded="false" onclick="menuAnexo()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
