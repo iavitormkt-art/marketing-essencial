@@ -51,7 +51,7 @@ def main():
     chamada = a[a.index("--chamada") + 1] if "--chamada" in a else titulo
     textos = json.loads(Path(a[a.index("--textos") + 1]).read_text(encoding="utf-8")) if "--textos" in a else {}
     destino = PASTA / "galeria" / cliente / ident
-    shutil.rmtree(destino, ignore_errors=True); destino.mkdir(parents=True)
+    shutil.rmtree(destino, ignore_errors=True); destino.mkdir(parents=True, exist_ok=True)
     itens, n = [], 0
     arquivos = sorted(p for p in origem.rglob("*") if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp"))
     for p in arquivos:
