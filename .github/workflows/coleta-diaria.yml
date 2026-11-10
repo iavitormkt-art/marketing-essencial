@@ -1,12 +1,22 @@
-# Robô diário do app de acompanhamento: coleta Instagram e Facebook de cada
-# cliente às 23h de Brasília (02h UTC) e grava o cofre criptografado.
-# Também pode ser rodado na mão em Actions > Coleta diária > Run workflow.
+# Robô de coleta do app de acompanhamento (Instagram e Facebook de cada cliente,
+# gravado no cofre criptografado):
+#   - 23h de Brasília (02h UTC): coleta completa (ontem + hoje).
+#   - a cada 15 min: coleta rápida (só hoje), para o app ter movimento no dia.
+# O GitHub atrasa ou pula agendamentos curtos; por isso o PC do Vitor também
+# dispara a rápida a cada 15 min (tarefa do Windows "Studio - Coleta rapida",
+# que roda  gh workflow run coleta-diaria.yml -f modo=rapida).
+# Na mão: Actions > Coleta diária > Run workflow.
 name: Coleta diária
 
 on:
   schedule:
     - cron: "0 2 * * *"
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch:
+    inputs:
+      modo:
+        description: "completa (ontem + hoje) ou rapida (só hoje)"
+        default: completa
 
 permissions:
   contents: write
@@ -35,11 +45,16 @@ jobs:
           FB_MORANGUINHO: ${{ secrets.FB_MORANGUINHO }}
           SENHA_MORANGUINHO: ${{ secrets.SENHA_MORANGUINHO }}
         # Um cliente novo = mais uma linha de segredos acima e o id na lista abaixo
-        run: python robo.py studio moranguinho
+        run: |
+          if [ "${{ github.event.schedule }}" = "0 2 * * *" ] || [ "${{ inputs.modo }}" = "completa" ]; then
+            python robo.py studio moranguinho
+          else
+            python robo.py --hoje studio moranguinho
+          fi
       - name: Gravar no repositório
         run: |
           git config user.name "robo-marketing-essencial"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add dados/*.enc.json
-          git diff --cached --quiet || git commit -m "Coleta $(TZ=America/Sao_Paulo date +%F)"
+          git diff --cached --quiet || git commit -m "Coleta $(TZ=America/Sao_Paulo date '+%F %H:%M')"
           git pull --rebase && git push
