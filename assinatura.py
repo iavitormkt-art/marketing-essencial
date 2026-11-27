@@ -7,7 +7,8 @@
 #       opcionais: --implantacao 497   (valor de tabela; isenta nos contratos de 6 e 12 meses)
 #                  --pago 12209        (valor pago no Pix ou no parcelado; sem isso, calcula pela tabela)
 #                  --captacao 800      (valor da captação bônus do contrato de 12 meses)
-#                  --sem-garantia      (o CNPJ/CPF já usou a garantia de 30 dias)
+#                  --sem-garantia      (o CNPJ/CPF já usou a garantia)
+#                  --garantia-dias N   (padrão 10, contrato v8 de 27/11/2026; clientes do contrato v7 têm 30)
 #   python assinatura.py <cliente> captacao-feita     (marca a captação bônus como feita)
 #   python assinatura.py <cliente> ver
 #   python assinatura.py <cliente> remover            (apaga a assinatura do cofre, ex.: depois de uma simulação)
@@ -45,6 +46,7 @@ def main():
             "pago": float(pago) if pago is not None else None,
             "captacao": float(opcao(args, "--captacao", 0)), "captacaoFeita": False,
             "garantia": "--sem-garantia" not in args,
+            "garantiaDias": int(opcao(args, "--garantia-dias", 10)),
         }
     elif acao == "captacao-feita":
         assert a, "assinatura ainda não definida"

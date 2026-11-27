@@ -347,6 +347,26 @@ nav button.destaque .bolinha svg { width: 20px; height: 20px; }
 nav button.destaque[aria-current="page"]::after { display: none; }
 nav button.destaque[aria-current="page"] .bolinha { box-shadow: 0 0 0 3px var(--marca-suave); }
 nav button.destaque .contador-nav { top: 0; right: calc(50% - 30px); box-shadow: 0 0 0 2px var(--cartao); }
+/* Direct do Instagram dentro de Comentários */
+.troca-direct { display: flex; gap: 6px; background: var(--cartao); padding: 4px; border-radius: 12px; box-shadow: var(--sombra); margin: 4px 0 12px; }
+.troca-direct button { flex: 1; border: 0; background: transparent; font: inherit; font-weight: 600; color: var(--texto-2); padding: 8px 0; border-radius: 9px; cursor: pointer; }
+.troca-direct button[aria-pressed="true"] { background: var(--marca); color: var(--sobre-marca); }
+.dm-item { display: flex; gap: 10px; align-items: center; padding: 10px 2px; border-bottom: 1px solid var(--linha, rgba(0,0,0,.07)); cursor: pointer; }
+.dm-item:last-child { border-bottom: 0; }
+.dm-item .av { width: 40px; height: 40px; border-radius: 50%; background: var(--marca-suave); color: var(--marca); display: grid; place-items: center; font-weight: 800; flex: none; }
+.dm-item .meio { flex: 1; min-width: 0; }
+.dm-item .meio b { display: block; }
+.dm-item .meio span { display: block; color: var(--texto-2); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dm-item .hora { font-size: 12px; color: var(--texto-2); }
+.dm-item.nova .meio span { color: var(--texto); font-weight: 700; }
+.dm-msgs { display: flex; flex-direction: column; gap: 6px; }
+.dm-msg { max-width: 80%; padding: 8px 12px; border-radius: 16px; background: var(--fundo, #f1f1f1); align-self: flex-start; white-space: pre-wrap; word-wrap: break-word; }
+.dm-msg.minha { align-self: flex-end; background: var(--marca); color: var(--sobre-marca); }
+.dm-msg small { display: block; font-size: 11px; opacity: .7; margin-top: 2px; }
+.dm-resp { display: flex; gap: 8px; margin-top: 12px; }
+.dm-resp textarea { flex: 1; border-radius: 12px; border: 1px solid rgba(0,0,0,.15); padding: 10px; font: inherit; min-height: 44px; resize: vertical; }
+.dm-resp button, .dm-voltar { border: 0; border-radius: 12px; background: var(--marca); color: var(--sobre-marca); font: inherit; font-weight: 700; padding: 0 16px; cursor: pointer; }
+.dm-voltar { background: transparent; color: var(--marca); padding: 6px 0; margin-bottom: 6px; }
 /* configurações e assinatura (discreto: engrenagem no topo) */
 /* gestor: lista de conversas (estilo WhatsApp) e conversa aberta em tela cheia */
 .abas-gestor { display: flex; gap: 6px; background: var(--cartao); padding: 4px; border-radius: 12px; box-shadow: var(--sombra); margin-top: 4px; }
@@ -1325,6 +1345,59 @@ const chamadaMarco = () => {
     <span>Ver o ponto de partida →</span></a></section>`;
 };
 
+// ---------------------------------------------------------------- Direct do Instagram
+// Conversas reais pela API oficial da Meta (servidor /direct). Ler e responder
+// dentro da janela de 24 h que a Meta permite.
+const CLIENTES_DIRECT = ["studio"]; // Moranguinho entra depois da aprovação da Meta
+let VER_DM = false, DM_LISTA = null, DM_ABERTA = null, DM_MSGS = null, DM_PODE = false, DM_ERRO = "";
+const temDirect = () => !!(CHAT_CFG && CLIENTE && CLIENTES_DIRECT.includes(CLIENTE));
+const dmApi = (rota, opc = {}) => fetch(`${CHAT_CFG.servidor}/direct/${rota}${rota.includes("?") ? "&" : "?"}cliente=${encodeURIComponent(CLIENTE)}`,
+  { ...opc, headers: { "x-app-token": CHAT_CFG.token, "content-type": "application/json", ...(opc.headers || {}) } }).then(async (r) => { const d = await r.json(); if (!r.ok) throw new Error(d.erro || "erro"); return d; });
+const trocaDirect = () => `<div class="troca-direct" role="group" aria-label="Ver">
+  <button aria-pressed="${!VER_DM}" onclick="verDirect(false)">Comentários</button>
+  <button aria-pressed="${VER_DM}" onclick="verDirect(true)">Direct</button></div>`;
+function verDirect(v) { VER_DM = v; DM_ABERTA = null; if (v) carregarDMs(); desenhar(); }
+async function carregarDMs() {
+  DM_ERRO = "";
+  try { DM_LISTA = (await dmApi("conversas")).conversas; } catch (e) { DM_ERRO = e.message; DM_LISTA = DM_LISTA || []; }
+  if (aba === "conversas" && VER_DM) desenhar();
+}
+async function abrirDM(i) {
+  DM_ABERTA = DM_LISTA[i]; DM_MSGS = null; desenhar();
+  try { const d = await dmApi(`mensagens?conversa=${encodeURIComponent(DM_ABERTA.id)}`); DM_MSGS = d.mensagens; DM_PODE = d.podeResponder; }
+  catch (e) { DM_ERRO = e.message; DM_MSGS = []; }
+  desenhar(); window.scrollTo(0, document.body.scrollHeight);
+}
+async function enviarDM() {
+  const caixa = document.getElementById("dm-texto"); const texto = caixa.value.trim(); if (!texto) return;
+  caixa.disabled = true;
+  try { await dmApi("enviar", { method: "POST", body: JSON.stringify({ para: DM_ABERTA.para, texto }) }); DM_MSGS.push({ texto, minha: true, em: new Date().toISOString() }); }
+  catch (e) { alert(e.message); caixa.disabled = false; return; }
+  desenhar(); window.scrollTo(0, document.body.scrollHeight);
+}
+const horaDM = (s) => { const d = new Date(s); const hoje = new Date().toDateString() === d.toDateString();
+  return hoje ? d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }); };
+function telaDirect() {
+  if (DM_ABERTA) {
+    const corpo = DM_MSGS === null ? `<div class="vazio">Carregando…</div>`
+      : DM_MSGS.map((m) => `<div class="dm-msg${m.minha ? " minha" : ""}">${esc(m.texto)}<small>${horaDM(m.em)}</small></div>`).join("") || `<div class="vazio">Sem mensagens.</div>`;
+    const resp = DM_MSGS === null ? "" : DM_PODE
+      ? `<div class="dm-resp"><textarea id="dm-texto" placeholder="Responder @${esc(DM_ABERTA.nome)}"></textarea><button onclick="enviarDM()">Enviar</button></div>`
+      : `<p class="vazio" style="margin-top:10px">Passou de 24 h da última mensagem do cliente: a Meta só deixa responder pelo Instagram.</p>`;
+    return `<section><button class="dm-voltar" onclick="DM_ABERTA=null;desenhar()">← Conversas</button><h2>@${esc(DM_ABERTA.nome)}</h2>
+      <div class="cartao"><div class="dm-msgs">${corpo}</div>${resp}</div></section>`;
+  }
+  if (DM_LISTA === null) { carregarDMs(); return `<section><div class="cartao vazio">Carregando conversas…</div></section>`; }
+  const erro = DM_ERRO ? `<div class="cartao vazio" style="margin-bottom:10px">${esc(DM_ERRO)}</div>` : "";
+  const espera = DM_LISTA.filter((c) => c.ultima && !c.ultima.minha).length;
+  return `<section><h2>Mensagens do Instagram</h2>${erro}
+    <div class="cartao resumo-dia" style="margin-bottom:10px">${DM_LISTA.length} conversas recentes${espera ? ` · <b>${espera}</b> aguardando resposta` : " · todas respondidas"}.</div>
+    <div class="cartao">${DM_LISTA.map((c, i) => `<div class="dm-item${c.ultima && !c.ultima.minha ? " nova" : ""}" onclick="abrirDM(${i})">
+      <div class="av">${esc((c.nome || "?")[0].toUpperCase())}</div>
+      <div class="meio"><b>@${esc(c.nome)}</b><span>${c.ultima ? (c.ultima.minha ? "Você: " : "") + esc(c.ultima.texto) : ""}</span></div>
+      <div class="hora">${horaDM(c.atualizado)}</div></div>`).join("") || `<div class="vazio">Nenhuma conversa.</div>`}</div></section>`;
+}
+
 // ---------------------------------------------------------------- telas
 const TELAS = {
   resumo: () => `${!GESTOR && CHAT_CFG ? blocoAvisos() : ""}${atalhoGaleria()}${chamadaMarco()}
@@ -1334,7 +1407,7 @@ const TELAS = {
     <section><h2>${periodo === "dia" ? "Postado hoje" : "Melhores posts"}</h2>${listaPosts(3)}</section>
     <section><h2>O que fizemos hoje</h2>${notasHoje()}</section>`,
   posts: () => `<section><h2>${periodo === "dia" ? "Postado hoje" : "Posts do período (mais alcance primeiro)"}</h2>${listaPosts(40)}</section>`,
-  conversas: () => `<section><h2>Comentários e perguntas</h2>${listaComentarios()}</section>`,
+  conversas: () => (temDirect() ? trocaDirect() : "") + (temDirect() && VER_DM ? telaDirect() : `<section><h2>Comentários e perguntas</h2>${listaComentarios()}</section>`),
   relatorio: () => `${marcoZero()}
     <section><h2>Relatório ${periodo === "dia" ? "do dia" : periodo === "semana" ? "da semana" : "do mês"}</h2>${resumoTexto()}</section>
     <section>${cartoesNumeros()}</section>
@@ -1372,9 +1445,10 @@ function situacao(a, hoje = new Date()) {
 // Valores do cancelamento pela Cláusula 12 (4 = garantia; 12.2 = antes do fim do prazo; 12.4 = depois)
 function calculoCancelamento(a) {
   const s = situacao(a);
-  if (a.garantia && s.dias <= 30) {
+  const diasGar = a.garantiaDias ?? 30; // contrato v7 = 30; v8 (27/11/2026) = 10
+  if (a.garantia && s.dias <= diasGar) {
     const pago = a.forma === "mensal" ? a.mensal : a.pago;
-    return { tipo: "garantia", s, linhas: [["Garantia de 30 dias: devolução de tudo o que foi pago", pago]], total: pago, sentido: "devolver" };
+    return { tipo: "garantia", s, linhas: [[`Garantia de ${diasGar} dias: devolução de tudo o que foi pago`, pago]], total: pago, sentido: "devolver", diasGar };
   }
   if (s.mes > a.prazo) return { tipo: "livre", s, linhas: [], total: 0 };
   const faltam = a.prazo - s.mes;
@@ -1450,7 +1524,7 @@ function telaCancelar() {
     <section><div class="cartao"><p><b>Antes de decidir:</b> muitas vezes dá para ajustar, trocando de plano ou mudando o foco do conteúdo.</p>
       ${CHAT_CFG ? `<button class="botao-app secundario" onclick="irAba('chat')">Conversar com o Studio antes</button>` : ""}</div></section>`;
   if (cancEtapa === 2) {
-    const titulo = c.tipo === "garantia" ? "Você está na garantia de 30 dias"
+    const titulo = c.tipo === "garantia" ? `Você está na garantia de ${c.diasGar} dias`
       : c.tipo === "livre" ? "Seu contrato já cumpriu o prazo" : `Valores do cancelamento (mês ${c.s.mes} de ${a.prazo})`;
     const explica = c.tipo === "garantia" ? "Você cancela sem multa e recebe de volta tudo o que pagou, em até 7 dias úteis, pelo mesmo meio de pagamento. As próximas cobranças são canceladas."
       : c.tipo === "livre" ? "Você pode cancelar sem multa. O serviço segue por mais 30 dias depois do pedido, como diz o contrato (Cláusula 2.2), e depois as cobranças param."
@@ -1496,7 +1570,7 @@ function enviarCancelamento() {
     `Plano: ${a.plano}, ${brl(a.mensal)}/mês, ${NOME_FORMA[a.forma].toLowerCase()}`,
     `Contrato: ${a.prazo} meses, desde ${dataBR(c.s.ini)} (mês ${c.s.mes})`,
     `Motivo: ${cancMotivo}${cancObs.trim() ? ` (${cancObs.trim()})` : ""}`,
-    c.tipo === "garantia" ? `Garantia de 30 dias: devolução de ${brl(c.total)}`
+    c.tipo === "garantia" ? `Garantia de ${c.diasGar} dias: devolução de ${brl(c.total)}`
       : c.tipo === "livre" ? "Contrato já cumpriu o prazo: cancelamento sem multa, com aviso de 30 dias"
       : c.sentido === "cobrar" ? `Valor do cancelamento (Cláusula 12.2): ${brl(c.total)}, que autorizo cobrar no meu cartão cadastrado`
       : `Valor a devolver (Cláusula 12.2): ${brl(c.total)}`,
